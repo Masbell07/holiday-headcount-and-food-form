@@ -10,13 +10,13 @@ const count = (n) => Math.max(0, Math.min(30, parseInt(n, 10) || 0));
 const publicView = ({ token, ...rest }) => rest;
 const isAdmin = (req) => process.env.ADMIN_KEY && req.headers.get("x-admin-key") === process.env.ADMIN_KEY;
 
-export async function GET() {
+async function getHandler() {
   const rsvps = await allRsvps();
   rsvps.sort((a, b) => a.createdAt - b.createdAt);
   return NextResponse.json({ rsvps: rsvps.map(publicView), saved: usingDatabase });
 }
 
-export async function POST(req) {
+async function postHandler(req) {
   let body;
   try { body = await req.json(); } catch { return err("Something went wrong sending your RSVP. Try again."); }
 
@@ -87,7 +87,7 @@ export async function POST(req) {
   return NextResponse.json({ id, token, rsvp: publicView(rsvp) });
 }
 
-export async function DELETE(req) {
+async function deleteHandler(req) {
   const { id, token } = await req.json().catch(() => ({}));
   const rsvp = id && (await getRsvp(id));
   if (!rsvp) return err("That RSVP is already gone.", 404);
@@ -100,3 +100,21 @@ export async function DELETE(req) {
 function err(message, status = 400) {
   return NextResponse.json({ error: message }, { status });
 }
+
+function safe(handler) {
+  return async (req) => {
+    try {
+      return await handler(req);
+    } catch (e) {
+      console.error("RSVP API error:", e);
+      const hint = /WRONGPASS|NOPERM|Unauthorized|401|403/i.test(String(e?.message))
+        ? " The database token may be read-only or wrong; check the KV_REST_API_TOKEN variable in Vercel."
+        : "";
+      return NextResponse.json({ error: `Server error: ${e?.message || e}.${hint}` }, { status: 500 });
+    }
+  };
+}
+
+export const GET = safe(getHandler);
+export const POST = safe(postHandler);
+export const DELETE = safe(deleteHandler);

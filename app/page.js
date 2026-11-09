@@ -162,7 +162,7 @@ export default function Page() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ ...form, id: mine?.id, token: mine?.token }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({ error: `The server answered with an error (status ${res.status}). Try again in a minute.` }));
       if (!res.ok) {
         setMessage({ kind: "error", text: data.error || "Something went wrong. Try again." });
         await load();
