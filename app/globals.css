@@ -252,3 +252,36 @@ main > .banner { margin-left: max(16px, calc((100% - 1100px) / 2)); margin-right
   .dish-inputs .x { grid-column: 2; grid-row: 1; }
 }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+
+/* Must-haves checklist */
+.musts {
+  max-width: 1100px;
+  margin: 36px auto 0;
+  margin-left: max(16px, calc((100% - 1100px) / 2));
+  margin-right: max(16px, calc((100% - 1100px) / 2));
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 20px;
+}
+.musts-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+.musts-head h2 { font-size: 32px; font-weight: 600; }
+.musts-head p { margin: 4px 0 0; color: var(--muted); }
+.progress { display: flex; flex-direction: column; gap: 6px; min-width: 200px; }
+.progress-n { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.progress-n strong { font-family: var(--display); font-size: 22px; color: var(--cran); }
+.bar { display: block; height: 10px; border-radius: 5px; background: #EFE2CC; overflow: hidden; }
+.bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--pumpkin), var(--gold)); border-radius: 5px; transition: width .4s ease; }
+.must-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; }
+.must-list li { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; border: 1.5px solid var(--line); }
+.must-list li.open { border-style: dashed; border-color: #EBCB86; background: var(--gold-soft); }
+.must-list li.got { background: #EEF2E6; border-color: #CFDABD; }
+.check { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; color: #fff; border: 2px solid #D9B66A; background: #fff; }
+.got .check { background: var(--sage); border-color: var(--sage); }
+.must-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.must-name { font-weight: 700; overflow-wrap: anywhere; }
+.must-by { font-size: 13px; color: var(--muted); }
+.open .must-by { color: #8A5A07; }
+.grab { flex: none; border: 0; border-radius: 999px; background: var(--cran); color: #fff; font-weight: 700; font-size: 13px; padding: 7px 12px; cursor: pointer; }
+.grab:hover { background: #74221A; }
+@media (prefers-reduced-motion: reduce) { .bar span { transition: none; } }

@@ -17,6 +17,10 @@ Guests RSVP, say how many adults and kids are coming, and claim dishes. The serv
    | `ADMIN_KEY` | any secret word | Lets you remove anyone's RSVP |
 4. **Redeploy** (Deployments → ⋯ → Redeploy) after adding storage or variables.
 
+## Changing the must-have list
+
+Edit `lib/event.js` and push. Each item needs a name and a type (Main, Side, Salad, Bread & rolls, Appetizer, Dessert, Drinks, Plates & supplies, Other).
+
 ## Removing someone's RSVP (host only)
 
 Set `ADMIN_KEY`, then open `https://your-site.vercel.app/?admin=YOUR_KEY` once. That browser will show a **Remove** button on every guest.

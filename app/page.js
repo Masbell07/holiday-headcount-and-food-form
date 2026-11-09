@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DISH_TYPES, dishKey, similarDishes } from "@/lib/dish";
+import { MUST_HAVES } from "@/lib/event";
 
 const EVENT = {
   date: "Thursday, November 26",
@@ -93,6 +94,14 @@ export default function Page() {
     return m;
   }, [list, mine]);
 
+  const mustHaves = useMemo(() => MUST_HAVES.map((m) => {
+    const key = dishKey(m.name);
+    const owner = list.find((r) => r.dishes?.some((d) => d.key === key));
+    return { ...m, key, by: owner ? (owner.id === mine?.id ? "you" : owner.name) : null };
+  }), [list, mine]);
+  const covered = mustHaves.filter((m) => m.by).length;
+  const openMust = mustHaves.filter((m) => !m.by);
+
   // Live duplicate check for each dish row in the form.
   const checks = form.dishes.map((d, i) => {
     const key = dishKey(d.name);
@@ -100,8 +109,11 @@ export default function Page() {
     const taken = claimedByOthers.find((c) => c.key === key);
     if (taken) return { block: `${taken.by} is already bringing ${taken.name.toLowerCase()}.` };
     if (form.dishes.some((o, j) => j < i && dishKey(o.name) === key)) return { block: "You already listed this one." };
+    if (openMust.some((m) => m.key === key)) return { ok: true, must: true };
     const near = similarDishes(d.name, claimedByOthers);
     if (near.length) return { warn: `Heads up: ${near.map((n) => `${n.by} is bringing ${n.name.toLowerCase()}`).join(", ")}.` };
+    const nearMust = similarDishes(d.name, openMust);
+    if (nearMust.length) return { warn: `"${nearMust[0].name}" is on the must-have list. If that's what this is, type it exactly that way so it gets checked off.` };
     return { ok: true };
   });
   const blocked = form.status !== "no" && checks.some((c) => c.block);
@@ -121,6 +133,21 @@ export default function Page() {
       const inputs = formRef.current?.querySelectorAll("input[data-dish]");
       const empty = [...(inputs || [])].find((el) => !el.value);
       empty?.focus({ preventScroll: true });
+    }, 50);
+  }
+
+  function bringItem(item) {
+    setEditing(true);
+    setMessage(null);
+    setForm((f) => {
+      const idx = f.dishes.findIndex((d) => !d.name.trim());
+      const dish = { name: item.name, type: item.type };
+      const dishes = idx >= 0 ? f.dishes.map((d, j) => (j === idx ? dish : d)) : [...f.dishes, dish];
+      return { ...f, status: f.status === "no" ? "yes" : f.status, dishes };
+    });
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      document.getElementById("name")?.focus({ preventScroll: true });
     }, 50);
   }
 
@@ -202,11 +229,38 @@ export default function Page() {
       {loadError && <p className="banner error">{loadError}</p>}
       {noDb && <p className="banner error">Setup needed: storage isn't connected yet, so RSVPs will disappear. Add Upstash Redis to this Vercel project (see README).</p>}
 
+      <section className="musts" aria-labelledby="must-h">
+        <div className="musts-head">
+          <div>
+            <h2 id="must-h">Must-haves</h2>
+            <p>The dishes we can't do without. Grab one if it's still open.</p>
+          </div>
+          <div className="progress" aria-label={`${covered} of ${mustHaves.length} covered`}>
+            <span className="progress-n"><strong>{covered}</strong> of {mustHaves.length} covered</span>
+            <span className="bar"><span style={{ width: `${(covered / mustHaves.length) * 100}%` }} /></span>
+          </div>
+        </div>
+        <ul className="must-list">
+          {mustHaves.map((m) => (
+            <li key={m.key} className={m.by ? "got" : "open"}>
+              <span className="check" aria-hidden="true">{m.by ? "✓" : ""}</span>
+              <span className="must-text">
+                <span className="must-name">{m.name}</span>
+                <span className="must-by">{m.by ? (m.by === "you" ? "You're bringing it" : m.by) : "Needs someone"}</span>
+              </span>
+              {!m.by && (
+                <button type="button" className="grab" onClick={() => bringItem(m)} aria-label={`I'll bring ${m.name}`}>I'll bring it</button>
+              )}
+            </li>
+          ))}
+        </ul>
+      </section>
+
       <div className="grid">
         <section className="table-board" aria-labelledby="menu-h">
           <div className="section-head">
             <h2 id="menu-h">On the table</h2>
-            <p>What everyone's bringing so far. Gold cards still need someone.</p>
+            <p>Everything people are bringing, must-haves and extras. Gold cards are empty so far.</p>
           </div>
           <div className="types">
             {DISH_TYPES.map((t) => {
@@ -305,7 +359,7 @@ export default function Page() {
                           )}
                         </div>
                         <p id={`dish-${i}-msg`} className="hint" aria-live="polite">
-                          {checks[i].block || checks[i].warn || (checks[i].ok ? "Nobody has this yet." : "")}
+                          {checks[i].block || checks[i].warn || (checks[i].must ? "That's a must-have. Thank you!" : checks[i].ok ? "Nobody has this yet." : "")}
                         </p>
                       </div>
                     ))}
