@@ -13,7 +13,7 @@ const EVENT = {
 const STATUS_LABEL = { yes: "Coming", maybe: "Maybe", no: "Can't make it" };
 const MINE = "tg2026-mine";
 const emptyDish = () => ({ name: "", type: "Side" });
-const blankForm = () => ({ name: "", status: "yes", adults: 1, kids: 0, dishes: [emptyDish()], notes: "" });
+const blankForm = () => ({ name: "", status: "yes", adults: 1, kids: 0, bringing: true, dishes: [emptyDish()], notes: "" });
 
 const store = {
   get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
@@ -116,7 +116,7 @@ export default function Page() {
     if (nearMust.length) return { warn: `"${nearMust[0].name}" is on the must-have list. If that's what this is, type it exactly that way so it gets checked off.` };
     return { ok: true };
   });
-  const blocked = form.status !== "no" && checks.some((c) => c.block);
+  const blocked = form.status !== "no" && form.bringing && checks.some((c) => c.block);
 
   const update = (patch) => { setForm((f) => ({ ...f, ...patch })); setMessage(null); };
   const updateDish = (i, patch) => update({ dishes: form.dishes.map((d, j) => (j === i ? { ...d, ...patch } : d)) });
@@ -126,7 +126,7 @@ export default function Page() {
     setForm((f) => {
       const idx = f.dishes.findIndex((d) => !d.name.trim());
       const dishes = idx >= 0 ? f.dishes.map((d, j) => (j === idx ? { ...d, type } : d)) : [...f.dishes, { name: "", type }];
-      return { ...f, status: f.status === "no" ? "yes" : f.status, dishes };
+      return { ...f, status: f.status === "no" ? "yes" : f.status, bringing: true, dishes };
     });
     setTimeout(() => {
       formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -143,7 +143,7 @@ export default function Page() {
       const idx = f.dishes.findIndex((d) => !d.name.trim());
       const dish = { name: item.name, type: item.type };
       const dishes = idx >= 0 ? f.dishes.map((d, j) => (j === idx ? dish : d)) : [...f.dishes, dish];
-      return { ...f, status: f.status === "no" ? "yes" : f.status, dishes };
+      return { ...f, status: f.status === "no" ? "yes" : f.status, bringing: true, dishes };
     });
     setTimeout(() => {
       formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -160,7 +160,7 @@ export default function Page() {
       const res = await fetch("/api/rsvps", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ ...form, id: mine?.id, token: mine?.token }),
+        body: JSON.stringify({ ...form, dishes: form.bringing ? form.dishes : [], id: mine?.id, token: mine?.token }),
       });
       const data = await res.json().catch(() => ({ error: `The server answered with an error (status ${res.status}). Try again in a minute.` }));
       if (!res.ok) {
@@ -299,6 +299,7 @@ export default function Page() {
               {myRsvp.status !== "no" && (
                 <p className="muted">{myRsvp.adults} adult{myRsvp.adults === 1 ? "" : "s"}{myRsvp.kids ? `, ${myRsvp.kids} kid${myRsvp.kids === 1 ? "" : "s"}` : ""}</p>
               )}
+              {myRsvp.status !== "no" && !myRsvp.dishes?.length && <p className="muted">Not bringing a dish</p>}
               {myRsvp.dishes?.length > 0 && (
                 <ul className="mine-list">
                   {myRsvp.dishes.map((d) => <li key={d.key}><strong>{d.name}</strong> <span>{d.type}</span></li>)}
@@ -340,6 +341,21 @@ export default function Page() {
                   </div>
 
                   <fieldset>
+                    <legend>Are you bringing food?</legend>
+                    <div className="choices two">
+                      <label className={`choice ${form.bringing ? "on" : ""}`}>
+                        <input type="radio" name="bringing" checked={form.bringing} onChange={() => update({ bringing: true })} />
+                        Yes, I'll bring something
+                      </label>
+                      <label className={`choice ${!form.bringing ? "on" : ""}`}>
+                        <input type="radio" name="bringing" checked={!form.bringing} onChange={() => update({ bringing: false })} />
+                        Just bringing myself
+                      </label>
+                    </div>
+                  </fieldset>
+
+                  {form.bringing && (
+                  <fieldset>
                     <legend>What are you bringing?</legend>
                     {form.dishes.map((d, i) => (
                       <div key={i} className={`dish-row ${checks[i].block ? "bad" : checks[i].warn ? "warn" : ""}`}>
@@ -367,6 +383,7 @@ export default function Page() {
                       <button type="button" className="link" onClick={() => update({ dishes: [...form.dishes, emptyDish()] })}>+ Add another dish</button>
                     )}
                   </fieldset>
+                  )}
                 </>
               )}
 
@@ -402,7 +419,7 @@ export default function Page() {
                   <strong>{r.name}</strong>{r.id === mine?.id && <span className="you"> (you)</span>}
                   <span className={`pill ${r.status}`}>{STATUS_LABEL[r.status]}</span>
                   {r.status !== "no" && <span className="muted small"> {r.adults + r.kids} {r.adults + r.kids === 1 ? "person" : "people"}</span>}
-                  {r.dishes?.length > 0 && <p className="small">Bringing {r.dishes.map((d) => d.name).join(", ")}</p>}
+                  {r.dishes?.length > 0 ? <p className="small">Bringing {r.dishes.map((d) => d.name).join(", ")}</p> : r.status !== "no" && <p className="small muted">Not bringing a dish</p>}
                   {r.notes && <p className="small muted">{r.notes}</p>}
                 </div>
                 {adminKey && r.id !== mine?.id && (
@@ -426,6 +443,7 @@ export default function Page() {
 function toForm(r) {
   return {
     name: r.name, status: r.status, adults: r.adults ?? 1, kids: r.kids ?? 0,
+    bringing: Boolean(r.dishes?.length) || r.status === "no",
     dishes: r.dishes?.length ? r.dishes.map(({ name, type }) => ({ name, type })) : [emptyDish()],
     notes: r.notes || "",
   };
