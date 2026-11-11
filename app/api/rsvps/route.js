@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { usingDatabase, allRsvps, getRsvp, saveRsvp, removeRsvp, claimDish, releaseDishes } from "@/lib/store";
 import { dishKey, DISH_TYPES } from "@/lib/dish";
+import { DAY_OPTIONS } from "@/lib/event";
 
 export const dynamic = "force-dynamic";
 
@@ -78,6 +79,7 @@ async function postHandler(req) {
     id, token, name, status,
     adults: status === "no" ? 0 : Math.max(count(body.adults), status === "yes" ? 1 : 0),
     kids: status === "no" ? 0 : count(body.kids),
+    day: status !== "no" && DAY_OPTIONS.some((d) => d.id === body.day) ? body.day : "",
     dishes,
     notes: clean(body.notes, 200),
     createdAt: existing?.createdAt || Date.now(),

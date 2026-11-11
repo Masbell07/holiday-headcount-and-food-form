@@ -21,6 +21,10 @@ Guests RSVP, say how many adults and kids are coming, and claim dishes. The serv
 
 Edit `lib/event.js` and push. Each item needs a name and a type (Main, Side, Salad, Bread & rolls, Appetizer, Dessert, Drinks, Plates & supplies, Other).
 
+## Day vote
+
+Guests vote for Thursday, Friday, Saturday or Sunday (Nov 26-29), all at 5 PM. Once you decide, set `CHOSEN_DAY` in `lib/event.js` to `"thu"`, `"fri"`, `"sat"` or `"sun"` and push. The header then shows that day and voting closes.
+
 ## Removing someone's RSVP (host only)
 
 Set `ADMIN_KEY`, then open `https://your-site.vercel.app/?admin=YOUR_KEY` once. That browser will show a **Remove** button on every guest.

@@ -2,18 +2,20 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DISH_TYPES, dishKey, similarDishes } from "@/lib/dish";
-import { MUST_HAVES } from "@/lib/event";
+import { MUST_HAVES, DAY_OPTIONS, CHOSEN_DAY, DINNER_TIME } from "@/lib/event";
 
+const CHOSEN = DAY_OPTIONS.find((d) => d.id === CHOSEN_DAY);
+const dayLabel = (id) => { const d = DAY_OPTIONS.find((x) => x.id === id); return d ? `${d.day}, ${d.date}` : ""; };
 const EVENT = {
-  date: "Thursday, November 26",
-  time: process.env.NEXT_PUBLIC_EVENT_TIME || "",
+  date: CHOSEN ? `${CHOSEN.day}, ${CHOSEN.date.replace("Nov", "November")}` : "Thursday to Sunday, Nov 26–29",
+  time: process.env.NEXT_PUBLIC_EVENT_TIME || DINNER_TIME,
   place: process.env.NEXT_PUBLIC_EVENT_PLACE || "",
   host: process.env.NEXT_PUBLIC_HOST_NAME || "",
 };
 const STATUS_LABEL = { yes: "Coming", maybe: "Maybe", no: "Can't make it" };
 const MINE = "tg2026-mine";
 const emptyDish = () => ({ name: "", type: "Side" });
-const blankForm = () => ({ name: "", status: "yes", adults: 1, kids: 0, bringing: true, dishes: [emptyDish()], notes: "" });
+const blankForm = () => ({ name: "", status: "yes", day: "", adults: 1, kids: 0, bringing: true, dishes: [emptyDish()], notes: "" });
 
 const store = {
   get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
@@ -87,6 +89,27 @@ export default function Page() {
       dishes: list.reduce((s, r) => s + (r.dishes?.length || 0), 0),
     };
   }, [list]);
+
+  const votes = useMemo(() => {
+    const voters = list.filter((r) => r.status !== "no" && r.day);
+    const rows = DAY_OPTIONS.map((d) => {
+      const vs = voters.filter((r) => r.day === d.id);
+      return { ...d, households: vs.length, people: vs.reduce((s, r) => s + (r.adults || 0) + (r.kids || 0), 0), names: vs.map((r) => r.name) };
+    });
+    const top = Math.max(0, ...rows.map((r) => r.households));
+    return { rows, total: voters.length, top };
+  }, [list]);
+  const myDay = myRsvp?.day;
+
+  function voteFor(id) {
+    setEditing(true);
+    setMessage(null);
+    setForm((f) => ({ ...f, day: id, status: f.status === "no" ? "yes" : f.status }));
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      document.getElementById("name")?.focus({ preventScroll: true });
+    }, 50);
+  }
 
   const byType = useMemo(() => {
     const m = Object.fromEntries(DISH_TYPES.map((t) => [t, []]));
@@ -213,9 +236,10 @@ export default function Page() {
             {EVENT.date}
             {EVENT.time && <> · {EVENT.time}</>}
           </p>
+          {!CHOSEN && <p className="where">Vote below for the day that works best</p>}
           {EVENT.place && <p className="where">{EVENT.place}</p>}
           {EVENT.host && <p className="where">Hosted by {EVENT.host}</p>}
-          <a href="#rsvp" className="cta">RSVP &amp; pick a dish</a>
+          <a href="#rsvp" className="cta">RSVP &amp; vote</a>
         </div>
       </header>
 
@@ -228,6 +252,41 @@ export default function Page() {
 
       {loadError && <p className="banner error">{loadError}</p>}
       {noDb && <p className="banner error">Setup needed: storage isn't connected yet, so RSVPs will disappear. Add Upstash Redis to this Vercel project (see README).</p>}
+
+      <section className="musts vote" aria-labelledby="vote-h">
+        <div className="musts-head">
+          <div>
+            <h2 id="vote-h">{CHOSEN ? "The day is set" : "Pick the day"}</h2>
+            <p>{CHOSEN ? `Dinner is ${CHOSEN.day}, ${CHOSEN.date} at ${DINNER_TIME}.` : `Dinner is at ${DINNER_TIME} whichever day wins. One vote per household.`}</p>
+          </div>
+          {!CHOSEN && <span className="progress-n"><strong>{votes.total}</strong> {votes.total === 1 ? "vote" : "votes"} so far</span>}
+        </div>
+        <ul className="day-list">
+          {votes.rows.map((d) => {
+            const leading = !CHOSEN && votes.top > 0 && d.households === votes.top;
+            const isChosen = CHOSEN?.id === d.id;
+            return (
+              <li key={d.id} className={`${leading || isChosen ? "lead" : ""} ${CHOSEN && !isChosen ? "dim" : ""}`}>
+                <div className="day-top">
+                  <span className="day-name">{d.day}</span>
+                  {isChosen ? <span className="tag ok">It's this day</span> : leading && <span className="tag ok">{votes.rows.filter((r) => r.households === votes.top).length > 1 ? "Tied" : "Leading"}</span>}
+                </div>
+                <span className="day-date">{d.date} · {DINNER_TIME}</span>
+                <span className="bar"><span style={{ width: votes.total ? `${(d.households / votes.total) * 100}%` : "0%" }} /></span>
+                <span className="day-count">
+                  {d.households} {d.households === 1 ? "vote" : "votes"}{d.people ? ` · ${d.people} ${d.people === 1 ? "person" : "people"}` : ""}
+                </span>
+                {d.names.length > 0 && <span className="day-names">{d.names.join(", ")}</span>}
+                {!CHOSEN && (
+                  myDay === d.id
+                    ? <span className="your-vote">Your vote</span>
+                    : <button type="button" className="grab" onClick={() => voteFor(d.id)} aria-label={`Vote for ${d.day}`}>Vote {d.day.slice(0, 3)}</button>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </section>
 
       <section className="musts" aria-labelledby="must-h">
         <div className="musts-head">
@@ -299,6 +358,7 @@ export default function Page() {
               {myRsvp.status !== "no" && (
                 <p className="muted">{myRsvp.adults} adult{myRsvp.adults === 1 ? "" : "s"}{myRsvp.kids ? `, ${myRsvp.kids} kid${myRsvp.kids === 1 ? "" : "s"}` : ""}</p>
               )}
+              {!CHOSEN && myRsvp.status !== "no" && <p className="muted">{myRsvp.day ? `Voted for ${dayLabel(myRsvp.day)}` : "Hasn't voted on a day yet"}</p>}
               {myRsvp.status !== "no" && !myRsvp.dishes?.length && <p className="muted">Not bringing a dish</p>}
               {myRsvp.dishes?.length > 0 && (
                 <ul className="mine-list">
@@ -335,6 +395,20 @@ export default function Page() {
 
               {form.status !== "no" && (
                 <>
+                  {!CHOSEN && (
+                    <fieldset>
+                      <legend>Which day works best? <span className="opt">(all at {DINNER_TIME})</span></legend>
+                      <div className="choices days">
+                        {DAY_OPTIONS.map((d) => (
+                          <label key={d.id} className={`choice ${form.day === d.id ? "on" : ""}`}>
+                            <input type="radio" name="day" value={d.id} checked={form.day === d.id} onChange={() => update({ day: d.id })} />
+                            <span className="choice-day">{d.day.slice(0, 3)}</span>
+                            <span className="choice-date">{d.date}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </fieldset>
+                  )}
                   <div className="counts">
                     <Counter id="adults" label="Adults" value={form.adults} onChange={(v) => update({ adults: v })} />
                     <Counter id="kids" label="Kids" value={form.kids} onChange={(v) => update({ kids: v })} />
@@ -419,6 +493,7 @@ export default function Page() {
                   <strong>{r.name}</strong>{r.id === mine?.id && <span className="you"> (you)</span>}
                   <span className={`pill ${r.status}`}>{STATUS_LABEL[r.status]}</span>
                   {r.status !== "no" && <span className="muted small"> {r.adults + r.kids} {r.adults + r.kids === 1 ? "person" : "people"}</span>}
+                  {!CHOSEN && r.status !== "no" && r.day && <p className="small">Votes {dayLabel(r.day)}</p>}
                   {r.dishes?.length > 0 ? <p className="small">Bringing {r.dishes.map((d) => d.name).join(", ")}</p> : r.status !== "no" && <p className="small muted">Not bringing a dish</p>}
                   {r.notes && <p className="small muted">{r.notes}</p>}
                 </div>
@@ -442,7 +517,7 @@ export default function Page() {
 
 function toForm(r) {
   return {
-    name: r.name, status: r.status, adults: r.adults ?? 1, kids: r.kids ?? 0,
+    name: r.name, status: r.status, day: r.day || "", adults: r.adults ?? 1, kids: r.kids ?? 0,
     bringing: Boolean(r.dishes?.length) || r.status === "no",
     dishes: r.dishes?.length ? r.dishes.map(({ name, type }) => ({ name, type })) : [emptyDish()],
     notes: r.notes || "",

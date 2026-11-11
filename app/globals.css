@@ -286,3 +286,26 @@ main > .banner { margin-left: max(16px, calc((100% - 1100px) / 2)); margin-right
 .grab:hover { background: #74221A; }
 @media (prefers-reduced-motion: reduce) { .bar span { transition: none; } }
 .choices.two { grid-template-columns: 1fr 1fr; }
+
+/* Day vote */
+.vote { margin-top: 24px; }
+.day-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.day-list li {
+  display: flex; flex-direction: column; gap: 6px; padding: 14px; border-radius: 14px;
+  border: 1.5px solid var(--line); background: #fff;
+}
+.day-list li.lead { border-color: var(--sage); background: #F3F6EC; }
+.day-list li.dim { opacity: 0.5; }
+.day-top { display: flex; justify-content: space-between; align-items: center; gap: 2px 6px; flex-wrap: wrap; }
+.day-name { font-family: var(--display); font-size: 22px; font-weight: 600; }
+.day-date { font-size: 14px; color: var(--muted); }
+.day-count { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.day-names { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+.day-list .grab { align-self: flex-start; margin-top: auto; }
+.your-vote { align-self: flex-start; margin-top: auto; font-size: 13px; font-weight: 700; color: var(--sage); }
+.tag.ok { color: var(--sage); }
+.choices.days { grid-template-columns: repeat(4, 1fr); }
+.choice-day { display: block; font-weight: 700; }
+.choice-date { display: block; font-size: 12px; font-weight: 500; opacity: 0.85; }
+@media (max-width: 760px) { .day-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 760px) { .day-name { font-size: 19px; } }
