@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DISH_TYPES } from "@/lib/dish";
-import { DAY_OPTIONS, DINNER_TIME, MUST_HAVES } from "@/lib/event";
+import { DAY_OPTIONS, MUST_HAVES } from "@/lib/event";
 import { dishKey } from "@/lib/dish";
 
 const STATUS_LABEL = { yes: "Coming", maybe: "Maybe", no: "Can't make it" };
@@ -93,12 +93,12 @@ export default function HostPage() {
       <section className="card host-card">
         <h2>Dinner day</h2>
         <p className="muted small">
-          {chosenDay ? `Set to ${dayName(chosenDay)?.day}, ${dayName(chosenDay)?.date} at ${DINNER_TIME}. Voting is closed.` : "Voting is open. Pick a day to close voting and show it at the top of the site."}
+          {chosenDay ? `Set to ${dayName(chosenDay)?.day}, ${dayName(chosenDay)?.date} at ${dayName(chosenDay)?.time}. Voting is closed.` : "Voting is open. Pick a day to close voting and show it at the top of the site."}
         </p>
         <ul className="host-days">
           {votes.map((d) => (
             <li key={d.id} className={chosenDay === d.id ? "on" : ""}>
-              <span><strong>{d.day}</strong> {d.date}</span>
+              <span><strong>{d.day}</strong> {d.date} · {d.time}</span>
               <span className="small muted">{d.n} {d.n === 1 ? "vote" : "votes"} · {d.people} people</span>
               {chosenDay === d.id
                 ? <span className="tag ok">Chosen</span>
@@ -230,7 +230,7 @@ function Editor({ value, onSave, onCancel }) {
           <label htmlFor={`d-${id}`}>Day vote</label>
           <select id={`d-${id}`} value={v.day} onChange={(e) => set({ day: e.target.value })} disabled={v.status === "no"}>
             <option value="">No vote</option>
-            {DAY_OPTIONS.map((d) => <option key={d.id} value={d.id}>{d.day} {d.date}</option>)}
+            {DAY_OPTIONS.map((d) => <option key={d.id} value={d.id}>{d.day} {d.date}, {d.time}</option>)}
           </select>
         </div>
         <div>

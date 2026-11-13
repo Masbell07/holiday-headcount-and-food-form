@@ -2,11 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DISH_TYPES, dishKey, similarDishes } from "@/lib/dish";
-import { MUST_HAVES, DAY_OPTIONS, CHOSEN_DAY, DINNER_TIME } from "@/lib/event";
+import { MUST_HAVES, DAY_OPTIONS, CHOSEN_DAY } from "@/lib/event";
 
-const dayLabel = (id) => { const d = DAY_OPTIONS.find((x) => x.id === id); return d ? `${d.day}, ${d.date}` : ""; };
+const dayLabel = (id) => { const d = DAY_OPTIONS.find((x) => x.id === id); return d ? `${d.day}, ${d.date} at ${d.time}` : ""; };
 const EVENT = {
-  time: process.env.NEXT_PUBLIC_EVENT_TIME || DINNER_TIME,
   place: process.env.NEXT_PUBLIC_EVENT_PLACE || "",
   host: process.env.NEXT_PUBLIC_HOST_NAME || "",
 };
@@ -33,9 +32,23 @@ export default function Page() {
   const [isHostUser, setIsHostUser] = useState(false);
   const [chosenId, setChosenId] = useState(CHOSEN_DAY);
   const CHOSEN = DAY_OPTIONS.find((d) => d.id === chosenId);
-  const eventDate = CHOSEN ? `${CHOSEN.day}, ${CHOSEN.date.replace("Nov", "November")}` : "Thursday to Sunday, Nov 26–29";
+  const eventDate = CHOSEN ? `${CHOSEN.day}, ${CHOSEN.date.replace("Nov", "November")} · ${CHOSEN.time}` : "Thursday to Sunday, Nov 26–29";
   const [confirmId, setConfirmId] = useState(null);
   const formRef = useRef(null);
+  const [formVisible, setFormVisible] = useState(false);
+
+  useEffect(() => {
+    const el = formRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(([e]) => setFormVisible(e.isIntersecting), { rootMargin: "0px 0px -30% 0px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  const goToForm = (focusName) => {
+    formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (focusName) setTimeout(() => document.getElementById("name")?.focus({ preventScroll: true }), 400);
+  };
 
   const load = useCallback(async () => {
     try {
@@ -197,6 +210,7 @@ export default function Page() {
       setEditing(false);
       setMessage({ kind: "ok", text: mine ? "Your RSVP is updated." : "You're on the list. Thank you!" });
       await load();
+      setTimeout(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
     } catch {
       setMessage({ kind: "error", text: "Couldn't reach the server. Check your connection and try again." });
     } finally {
@@ -232,12 +246,11 @@ export default function Page() {
           <h1>Thanksgiving <span>2026</span></h1>
           <p className="when">
             {eventDate}
-            {EVENT.time && <> · {EVENT.time}</>}
           </p>
-          {!CHOSEN && <p className="where">Vote below for the day that works best</p>}
+          {!CHOSEN && <p className="where">Thursday at 6 PM, or Friday to Sunday at 2 PM. Vote for the day that works best.</p>}
           {EVENT.place && <p className="where">{EVENT.place}</p>}
           {EVENT.host && <p className="where">Hosted by {EVENT.host}</p>}
-          <a href="#rsvp" className="cta">RSVP &amp; vote</a>
+          <a href="#rsvp" className="cta" onClick={(e) => { e.preventDefault(); goToForm(true); }}>{myRsvp ? "See my RSVP" : CHOSEN ? "RSVP" : "RSVP & vote"}</a>
         </div>
       </header>
 
@@ -255,7 +268,7 @@ export default function Page() {
         <div className="musts-head">
           <div>
             <h2 id="vote-h">{CHOSEN ? "The day is set" : "Pick the day"}</h2>
-            <p>{CHOSEN ? `Dinner is ${CHOSEN.day}, ${CHOSEN.date} at ${DINNER_TIME}.` : `Dinner is at ${DINNER_TIME} whichever day wins. One vote per household.`}</p>
+            <p>{CHOSEN ? `Dinner is ${CHOSEN.day}, ${CHOSEN.date} at ${CHOSEN.time}.` : "One vote per household. Thursday dinner is at 6 PM; Friday to Sunday it's at 2 PM."}</p>
           </div>
           {!CHOSEN && <span className="progress-n"><strong>{votes.total}</strong> {votes.total === 1 ? "vote" : "votes"} so far</span>}
         </div>
@@ -269,7 +282,7 @@ export default function Page() {
                   <span className="day-name">{d.day}</span>
                   {isChosen ? <span className="tag ok">It's this day</span> : leading && <span className="tag ok">{votes.rows.filter((r) => r.households === votes.top).length > 1 ? "Tied" : "Leading"}</span>}
                 </div>
-                <span className="day-date">{d.date} · {DINNER_TIME}</span>
+                <span className="day-date">{d.date} · <strong>{d.time}</strong></span>
                 <span className="bar"><span style={{ width: votes.total ? `${(d.households / votes.total) * 100}%` : "0%" }} /></span>
                 <span className="day-count">
                   {d.households} {d.households === 1 ? "vote" : "votes"}{d.people ? ` · ${d.people} ${d.people === 1 ? "person" : "people"}` : ""}
@@ -300,13 +313,22 @@ export default function Page() {
         <ul className="must-list">
           {mustHaves.map((m) => (
             <li key={m.key} className={m.by ? "got" : "open"}>
-              <span className="check" aria-hidden="true">{m.by ? "✓" : ""}</span>
-              <span className="must-text">
-                <span className="must-name">{m.name}</span>
-                <span className="must-by">{m.by ? (m.by === "you" ? "You're bringing it" : m.by) : "Needs someone"}</span>
-              </span>
-              {!m.by && (
-                <button type="button" className="grab" onClick={() => bringItem(m)} aria-label={`I'll bring ${m.name}`}>I'll bring it</button>
+              {m.by ? (
+                <div className="must-item">
+                  <span className="check" aria-hidden="true">✓</span>
+                  <span className="must-text">
+                    <span className="must-name">{m.name}</span>
+                    <span className="must-by">{m.by === "you" ? "You're bringing it" : m.by}</span>
+                  </span>
+                </div>
+              ) : (
+                <button type="button" className="must-item" onClick={() => bringItem(m)} aria-label={`I'll bring ${m.name}`}>
+                  <span className="check" aria-hidden="true">+</span>
+                  <span className="must-text">
+                    <span className="must-name">{m.name}</span>
+                    <span className="must-by">Tap to bring it</span>
+                  </span>
+                </button>
               )}
             </li>
           ))}
@@ -317,34 +339,39 @@ export default function Page() {
         <section className="table-board" aria-labelledby="menu-h">
           <div className="section-head">
             <h2 id="menu-h">On the table</h2>
-            <p>Everything people are bringing, must-haves and extras. Gold cards are empty so far.</p>
+            <p>Everything people are bringing, must-haves and extras.</p>
           </div>
-          <div className="types">
-            {DISH_TYPES.map((t) => {
-              const items = byType[t];
-              return (
-                <article key={t} className={`type ${items.length ? "" : "needed"}`}>
+          {DISH_TYPES.some((t) => byType[t].length) ? (
+            <div className="types">
+              {DISH_TYPES.filter((t) => byType[t].length).map((t) => (
+                <article key={t} className="type">
                   <header>
                     <h3>{t}</h3>
-                    {items.length ? <span className="count">{items.length}</span> : <span className="tag">Still needed</span>}
+                    <span className="count">{byType[t].length}</span>
                   </header>
-                  {items.length > 0 && (
-                    <ul>
-                      {items.map((d) => (
-                        <li key={d.key} className={d.mine ? "mine" : ""}>
-                          <span className="dish">{d.name}</span>
-                          <span className="by">{d.mine ? "you" : d.by}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  <button type="button" className="link" onClick={() => bringFrom(t)}>
-                    + I'll bring {items.length ? "another" : "one"}
-                  </button>
+                  <ul>
+                    {byType[t].map((d) => (
+                      <li key={d.key} className={d.mine ? "mine" : ""}>
+                        <span className="dish">{d.name}</span>
+                        <span className="by">{d.mine ? "you" : d.by}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <button type="button" className="link" onClick={() => bringFrom(t)}>+ I'll bring another</button>
                 </article>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <p className="muted">Nothing claimed yet.</p>
+          )}
+          {DISH_TYPES.some((t) => !byType[t].length) && (
+            <div className="empty-types">
+              <span className="small muted">Nobody's bringing yet:</span>
+              {DISH_TYPES.filter((t) => !byType[t].length).map((t) => (
+                <button key={t} type="button" className="chip" onClick={() => bringFrom(t)}>+ {t}</button>
+              ))}
+            </div>
+          )}
         </section>
 
         <aside className="rsvp" id="rsvp" ref={formRef}>
@@ -395,13 +422,13 @@ export default function Page() {
                 <>
                   {!CHOSEN && (
                     <fieldset>
-                      <legend>Which day works best? <span className="opt">(all at {DINNER_TIME})</span></legend>
+                      <legend>Which day works best?</legend>
                       <div className="choices days">
                         {DAY_OPTIONS.map((d) => (
                           <label key={d.id} className={`choice ${form.day === d.id ? "on" : ""}`}>
                             <input type="radio" name="day" value={d.id} checked={form.day === d.id} onChange={() => update({ day: d.id })} />
                             <span className="choice-day">{d.day.slice(0, 3)}</span>
-                            <span className="choice-date">{d.date}</span>
+                            <span className="choice-date">{d.time}</span>
                           </label>
                         ))}
                       </div>
@@ -507,6 +534,22 @@ export default function Page() {
           </ul>
         )}
       </section>
+
+      {!formVisible && (
+        <div className="sticky-bar">
+          {myRsvp && !editing ? (
+            <>
+              <span className="sticky-text">
+                <strong>{myRsvp.name}</strong>
+                <span>{STATUS_LABEL[myRsvp.status]}{myRsvp.day && !CHOSEN ? ` · ${DAY_OPTIONS.find((d) => d.id === myRsvp.day)?.day.slice(0, 3)}` : ""}{myRsvp.dishes?.length ? ` · ${myRsvp.dishes.length} dish${myRsvp.dishes.length === 1 ? "" : "es"}` : ""}</span>
+              </span>
+              <button type="button" className="btn" onClick={() => goToForm(false)}>View my RSVP</button>
+            </>
+          ) : (
+            <button type="button" className="btn wide" onClick={() => goToForm(true)}>{mine ? "Finish updating my RSVP" : CHOSEN ? "RSVP" : "RSVP & vote"}</button>
+          )}
+        </div>
+      )}
 
       <footer className="foot">
         Made with gratitude · Happy Thanksgiving

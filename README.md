@@ -22,7 +22,7 @@ Edit `lib/event.js` and push. Each item needs a name and a type (Main, Side, Sal
 
 ## Day vote
 
-Guests vote for Thursday, Friday, Saturday or Sunday (Nov 26-29), all at 5 PM. Once you decide, set `CHOSEN_DAY` in `lib/event.js` to `"thu"`, `"fri"`, `"sat"` or `"sun"` and push. The header then shows that day and voting closes.
+Guests vote for Thursday Nov 26 (6 PM), or Friday Nov 27, Saturday Nov 28 or Sunday Nov 29 (2 PM). Change days or times in `lib/event.js`. Pick the final day from the host dashboard.
 
 ## Host dashboard
 
