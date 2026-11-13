@@ -75,7 +75,7 @@ export default function HostDashboard({ eventId }) {
       <header className="host-head">
         <div>
           <p className="eyebrow">{EV.name} {EV.year}</p>
-          <h1>Host dashboard</h1>
+          <h1>{EV.name} host dashboard</h1>
           <p className="small muted">
             Switch to:{" "}
             {Object.values(EVENTS).filter((e) => e.id !== EV.id).map((e) => (
@@ -101,7 +101,7 @@ export default function HostDashboard({ eventId }) {
       {openMust.length > 0 && <p className="small muted">Still open: {openMust.map((m) => m.name).join(", ")}</p>}
 
       <section className="card host-card">
-        <h2>Dinner day</h2>
+        <h2>{EV.name} dinner day</h2>
         <p className="muted small">
           {chosenDay ? `Set to ${dayName(chosenDay)?.day}, ${dayName(chosenDay)?.date} at ${dayName(chosenDay)?.time}. Voting is closed.` : "Voting is open. Pick a day to close voting and show it at the top of the site."}
         </p>
@@ -121,7 +121,7 @@ export default function HostDashboard({ eventId }) {
 
       <section className="card host-card">
         <div className="row spread">
-          <h2>RSVPs</h2>
+          <h2>{EV.name} RSVPs</h2>
           {!editing && <button className="btn" onClick={() => setEditing(blank())}>+ Add an RSVP</button>}
         </div>
 
@@ -166,7 +166,7 @@ export default function HostDashboard({ eventId }) {
 
       <section className="card host-card danger-zone">
         <h2>Start over</h2>
-        <p className="small muted">Deletes every RSVP, vote and dish claim. The chosen day stays as it is. This can't be undone.</p>
+        <p className="small muted">Deletes every {EV.name} RSVP, vote and dish claim. The other event isn't affected. The chosen day stays as it is. This can't be undone.</p>
         <div className="row">
           <label htmlFor="reset" className="small">Type RESET to confirm</label>
           <input id="reset" value={resetText} onChange={(e) => setResetText(e.target.value)} style={{ maxWidth: 140 }} autoComplete="off" />
