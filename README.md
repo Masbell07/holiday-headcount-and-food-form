@@ -1,4 +1,4 @@
-# Thanksgiving 2026 RSVP
+# Holiday RSVP: Thanksgiving & Christmas 2026
 
 Guests RSVP, say how many adults and kids are coming, and claim dishes. The server rejects a dish someone else already claimed, even when it's worded differently ("Grandma's mashed potatoes" vs "mashed potato"). Similar dishes, like sweet potato pie next to sweet potato casserole, get a heads-up but are allowed. Guests can come back on the same phone to change or remove their RSVP.
 
@@ -16,13 +16,14 @@ Guests RSVP, say how many adults and kids are coming, and claim dishes. The serv
    | `NEXT_PUBLIC_HOST_NAME` | `Mel` | "Hosted by Mel" |
    4. **Redeploy** (Deployments → ⋯ → Redeploy) after adding storage or variables.
 
-## Changing the must-have list
+## Events
 
-Edit `lib/event.js` and push. Each item needs a name and a type (Main, Side, Salad, Bread & rolls, Appetizer, Dessert, Drinks, Plates & supplies, Other).
+| Event | Guest page | Host dashboard |
+|---|---|---|
+| Thanksgiving 2026 | `/` | `/host` |
+| Christmas 2026 | `/xmas` | `/host-xmas` |
 
-## Day vote
-
-Guests vote for Thursday Nov 26 (6 PM), or Friday Nov 27, Saturday Nov 28 or Sunday Nov 29 (2 PM). Change days or times in `lib/event.js`. Pick the final day from the host dashboard.
+Each event has its own RSVPs, day vote, dish claims and must-haves. Days, times and must-haves live in `lib/events.js`. One host login works for both dashboards.
 
 ## Host dashboard
 

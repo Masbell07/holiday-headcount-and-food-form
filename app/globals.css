@@ -38,7 +38,7 @@ main { padding-bottom: 48px; }
 .hero {
   position: relative;
   overflow: hidden;
-  background: radial-gradient(120% 140% at 50% 0%, #5A3420 0%, #3B2414 60%, #2C1A0E 100%);
+  background: radial-gradient(120% 140% at 50% 0%, var(--hero-1, #5A3420) 0%, var(--hero-2, #3B2414) 60%, var(--hero-3, #2C1A0E) 100%);
   color: #F8E9D2;
   text-align: center;
   padding: 64px 20px 72px;
@@ -436,3 +436,38 @@ input:disabled, select:disabled { opacity: 0.5; }
   .types { grid-template-columns: 1fr; }
   .guest-list { grid-template-columns: 1fr; }
 }
+
+/* Christmas: evergreen header, holly red accents, gold and frost */
+.theme-xmas {
+  --bg: #F3F1EA;
+  --card: #FFFDF8;
+  --ink: #1E2B22;
+  --muted: #5F6B62;
+  --line: #DAD8CB;
+  --cran: #A61E22;
+  --pumpkin: #2F7A4C;
+  --gold: #D4A537;
+  --gold-soft: #F7EED3;
+  --sage: #2F7A4C;
+  --hero-1: #1F5A3A;
+  --hero-2: #123524;
+  --hero-3: #0B2418;
+  background: var(--bg);
+  color: var(--ink);
+}
+.theme-xmas .hero { color: #F4F1E8; }
+.theme-xmas .when, .theme-xmas .where { color: #E3EEE6; }
+.theme-xmas .cta { background: var(--cran); }
+.theme-xmas .cta:hover { background: #8A171B; }
+.theme-xmas .btn:hover:not(:disabled), .theme-xmas .grab:hover { background: #8A171B; }
+.theme-xmas .bar span { background: linear-gradient(90deg, var(--cran), var(--gold)); }
+.theme-xmas .type li { border-left-color: var(--cran); }
+.theme-xmas .day-list li.lead, .theme-xmas .host-days li.on { background: #EAF3EC; border-color: var(--sage); }
+.theme-xmas .got .must-item { background: #EAF3EC; border-color: #BFD8C6; }
+.theme-xmas .counter button, .theme-xmas .x { background: #ECEADF; }
+.theme-xmas .sticky-bar { background: rgba(255, 253, 248, 0.96); }
+.theme-xmas input:focus, .theme-xmas select:focus, .theme-xmas textarea:focus { border-color: var(--sage); box-shadow: 0 0 0 3px rgba(47,122,76,0.2); }
+.link.inline { display: inline; padding: 0; margin-right: 10px; }
+.theme-xmas, .theme-thanksgiving { min-height: 100vh; }
+body:has(.theme-xmas) { background: #F3F1EA; }
+.nowrap { white-space: nowrap; }

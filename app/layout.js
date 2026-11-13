@@ -4,9 +4,8 @@ import "@fontsource-variable/dm-sans";
 import "./globals.css";
 
 export const metadata = {
-  title: "Thanksgiving 2026",
-  description: "RSVP and claim a dish so nobody brings the same thing.",
-  openGraph: { title: "Thanksgiving 2026 🦃", description: "RSVP and tell us what you're bringing." },
+  title: "Holiday RSVP",
+  description: "RSVP, vote for the day and claim a dish.",
 };
 
 export const viewport = { themeColor: "#3B2414", width: "device-width", initialScale: 1 };
