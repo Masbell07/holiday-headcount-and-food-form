@@ -358,11 +358,11 @@ input:disabled, select:disabled { opacity: 0.5; }
 .btn.wide { width: 100%; }
 
 @media (max-width: 880px) {
-  /* One column, with the RSVP form right after the day vote */
+  /* One column: day vote, then must-haves, then the RSVP form */
   main { display: flex; flex-direction: column; padding-bottom: 96px; }
   .grid { display: contents; }
   .hero { order: 1; } .stats { order: 2; } main > .banner { order: 3; }
-  .vote { order: 4; } .rsvp { order: 5; } .musts:not(.vote) { order: 6; }
+  .vote { order: 4; } .musts:not(.vote) { order: 5; } .rsvp { order: 6; }
   .table-board { order: 7; } .guests { order: 8; } .foot { order: 9; } .sticky-bar { order: 10; }
   .rsvp, .table-board { margin: 24px 16px 0; }
   .rsvp { position: static; }
