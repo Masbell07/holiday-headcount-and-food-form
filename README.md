@@ -14,8 +14,7 @@ Guests RSVP, say how many adults and kids are coming, and claim dishes. The serv
    | `NEXT_PUBLIC_EVENT_TIME` | `2:00 PM` | Next to the date |
    | `NEXT_PUBLIC_EVENT_PLACE` | `123 Maple St, Paola KS` | Under the date |
    | `NEXT_PUBLIC_HOST_NAME` | `Mel` | "Hosted by Mel" |
-   | `ADMIN_KEY` | any secret word | Lets you remove anyone's RSVP |
-4. **Redeploy** (Deployments → ⋯ → Redeploy) after adding storage or variables.
+   4. **Redeploy** (Deployments → ⋯ → Redeploy) after adding storage or variables.
 
 ## Changing the must-have list
 
@@ -25,9 +24,15 @@ Edit `lib/event.js` and push. Each item needs a name and a type (Main, Side, Sal
 
 Guests vote for Thursday, Friday, Saturday or Sunday (Nov 26-29), all at 5 PM. Once you decide, set `CHOSEN_DAY` in `lib/event.js` to `"thu"`, `"fri"`, `"sat"` or `"sun"` and push. The header then shows that day and voting closes.
 
-## Removing someone's RSVP (host only)
+## Host dashboard
 
-Set `ADMIN_KEY`, then open `https://your-site.vercel.app/?admin=YOUR_KEY` once. That browser will show a **Remove** button on every guest.
+Go to `/host` (there's also a small "Host login" link at the bottom of the site) and log in as **mel**. From there you can:
+
+- edit or remove anyone's RSVP, or add one for someone who called or texted
+- set the final dinner day (this closes voting and updates the header), or reopen voting
+- clear every RSVP and start over
+
+The password is stored only as a salted hash, never in plain text. To change it, add `HOST_PASSWORD` (and optionally `HOST_USER`) in Vercel's Environment Variables and redeploy; those replace the built-in login.
 
 ## Run locally
 

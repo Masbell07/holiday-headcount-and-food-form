@@ -309,3 +309,33 @@ main > .banner { margin-left: max(16px, calc((100% - 1100px) / 2)); margin-right
 .choice-date { display: block; font-size: 12px; font-weight: 500; opacity: 0.85; }
 @media (max-width: 760px) { .day-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 760px) { .day-name { font-size: 19px; } }
+.host-link { display: block; margin-top: 10px; font-family: var(--body); font-style: normal; font-size: 13px; color: var(--muted); }
+
+/* Host dashboard */
+.host { max-width: 900px; margin: 0 auto; padding: 32px 16px 64px; display: flex; flex-direction: column; gap: 18px; }
+.host.login { max-width: 420px; min-height: 100vh; justify-content: center; }
+.host h1 { font-size: 36px; font-weight: 600; }
+.host h2 { font-size: 24px; font-weight: 600; }
+.host-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.host-stats { display: flex; flex-wrap: wrap; gap: 8px; }
+.host-stats > div { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; font-size: 14px; }
+.host-stats strong { font-family: var(--display); font-size: 22px; color: var(--cran); font-variant-numeric: tabular-nums; }
+.host-card { border-top-width: 1px; border-top-color: var(--line); }
+.host-days { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+.host-days li { display: flex; flex-direction: column; gap: 6px; padding: 12px; border: 1.5px solid var(--line); border-radius: 12px; background: #fff; }
+.host-days li.on { border-color: var(--sage); background: #F3F6EC; }
+.host-days .grab { align-self: flex-start; }
+.host-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.host-list > li { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: #fff; }
+.host-row { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+.host-row p { margin: 4px 0 0; }
+.row.spread { justify-content: space-between; margin-top: 0; }
+.editor { display: flex; flex-direction: column; gap: 8px; }
+.editor-grid { display: grid; grid-template-columns: 2fr 1fr 1.4fr 0.7fr 0.7fr; gap: 8px; }
+.editor-grid > div { display: flex; flex-direction: column; gap: 4px; }
+.editor .dish-inputs { margin-bottom: 4px; }
+.pw { display: flex; gap: 8px; align-items: center; }
+.danger-zone { border-color: #EBC4BE; }
+.danger-btn { background: var(--bad); }
+input:disabled, select:disabled { opacity: 0.5; }
+@media (max-width: 640px) { .editor-grid { grid-template-columns: 1fr 1fr; } .editor-grid > div:first-child { grid-column: 1 / -1; } }

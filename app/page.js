@@ -4,10 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DISH_TYPES, dishKey, similarDishes } from "@/lib/dish";
 import { MUST_HAVES, DAY_OPTIONS, CHOSEN_DAY, DINNER_TIME } from "@/lib/event";
 
-const CHOSEN = DAY_OPTIONS.find((d) => d.id === CHOSEN_DAY);
 const dayLabel = (id) => { const d = DAY_OPTIONS.find((x) => x.id === id); return d ? `${d.day}, ${d.date}` : ""; };
 const EVENT = {
-  date: CHOSEN ? `${CHOSEN.day}, ${CHOSEN.date.replace("Nov", "November")}` : "Thursday to Sunday, Nov 26–29",
   time: process.env.NEXT_PUBLIC_EVENT_TIME || DINNER_TIME,
   place: process.env.NEXT_PUBLIC_EVENT_PLACE || "",
   host: process.env.NEXT_PUBLIC_HOST_NAME || "",
@@ -32,7 +30,10 @@ export default function Page() {
   const [editing, setEditing] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
-  const [adminKey, setAdminKey] = useState("");
+  const [isHostUser, setIsHostUser] = useState(false);
+  const [chosenId, setChosenId] = useState(CHOSEN_DAY);
+  const CHOSEN = DAY_OPTIONS.find((d) => d.id === chosenId);
+  const eventDate = CHOSEN ? `${CHOSEN.day}, ${CHOSEN.date.replace("Nov", "November")}` : "Thursday to Sunday, Nov 26–29";
   const [confirmId, setConfirmId] = useState(null);
   const formRef = useRef(null);
 
@@ -43,6 +44,7 @@ export default function Page() {
       const data = await res.json();
       setRsvps(data.rsvps);
       setNoDb(data.saved === false);
+      setChosenId(data.chosenDay || CHOSEN_DAY);
       setLoadError("");
       return data.rsvps;
     } catch {
@@ -52,10 +54,7 @@ export default function Page() {
   }, []);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const a = params.get("admin");
-    if (a) { store.set("tg2026-admin", a); window.history.replaceState({}, "", window.location.pathname); }
-    setAdminKey(a || store.get("tg2026-admin") || "");
+    fetch("/api/host/login", { cache: "no-store" }).then((r) => r.json()).then((d) => setIsHostUser(Boolean(d.host))).catch(() => {});
     const saved = store.get(MINE);
     load().then((list) => {
       const me = saved && list?.find((r) => r.id === saved.id);
@@ -205,9 +204,8 @@ export default function Page() {
     }
   }
 
-  async function remove(id, asAdmin) {
+  async function remove(id) {
     const headers = { "content-type": "application/json" };
-    if (asAdmin) headers["x-admin-key"] = adminKey;
     const res = await fetch("/api/rsvps", {
       method: "DELETE", headers,
       body: JSON.stringify({ id, token: id === mine?.id ? mine.token : undefined }),
@@ -233,7 +231,7 @@ export default function Page() {
           <p className="eyebrow">You're invited</p>
           <h1>Thanksgiving <span>2026</span></h1>
           <p className="when">
-            {EVENT.date}
+            {eventDate}
             {EVENT.time && <> · {EVENT.time}</>}
           </p>
           {!CHOSEN && <p className="where">Vote below for the day that works best</p>}
@@ -497,9 +495,9 @@ export default function Page() {
                   {r.dishes?.length > 0 ? <p className="small">Bringing {r.dishes.map((d) => d.name).join(", ")}</p> : r.status !== "no" && <p className="small muted">Not bringing a dish</p>}
                   {r.notes && <p className="small muted">{r.notes}</p>}
                 </div>
-                {adminKey && r.id !== mine?.id && (
+                {isHostUser && r.id !== mine?.id && (
                   confirmId === r.id ? (
-                    <span className="confirm">Remove? <button className="link danger" onClick={() => remove(r.id, true)}>Yes</button> <button className="link" onClick={() => setConfirmId(null)}>No</button></span>
+                    <span className="confirm">Remove? <button className="link danger" onClick={() => remove(r.id)}>Yes</button> <button className="link" onClick={() => setConfirmId(null)}>No</button></span>
                   ) : (
                     <button className="link" onClick={() => setConfirmId(r.id)}>Remove</button>
                   )
@@ -510,7 +508,10 @@ export default function Page() {
         )}
       </section>
 
-      <footer className="foot">Made with gratitude · Happy Thanksgiving</footer>
+      <footer className="foot">
+        Made with gratitude · Happy Thanksgiving
+        <a className="host-link" href="/host">{isHostUser ? "Host dashboard" : "Host login"}</a>
+      </footer>
     </main>
   );
 }
