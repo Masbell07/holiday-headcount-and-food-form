@@ -521,3 +521,4 @@ body:has(.theme-xmas) { background: #F3F1EA; }
 .share { display: flex; flex-direction: column; gap: 6px; }
 .share-url { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 13px; overflow-wrap: anywhere; flex: 1; min-width: 0; }
 .santa-main > .card .btn[href] { align-self: flex-start; text-decoration: none; }
+.pin-input { max-width: 140px; letter-spacing: 0.4em; font-size: 20px; text-align: center; }

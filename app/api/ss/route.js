@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { allEntries, getSantaSettings, isOpen, saveEntry, deleteEntry, myView, CLOSES_AT } from "@/lib/santa";
+import { allEntries, getSantaSettings, isOpen, saveEntry, deleteEntry, myView, reveal, CLOSES_AT } from "@/lib/santa";
 import { err, safe } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +23,10 @@ export const POST = safe(async (req) => {
   if (body.action === "me") {
     const view = await myView(body.id, body.token);
     return view ? NextResponse.json(view) : err("Not found on this device.", 404);
+  }
+  if (body.action === "reveal") {
+    const r = await reveal(body);
+    return NextResponse.json(r.body, { status: r.status });
   }
   if (body.action === "delete") {
     const r = await deleteEntry(body.id, body.token);

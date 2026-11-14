@@ -19,15 +19,20 @@ export default function SantaHost({ onLoggedOut }) {
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState("");
   const [newHouse, setNewHouse] = useState("");
-  const [budget, setBudget] = useState("");
+  const [newPin, setNewPin] = useState("");
+  const [bMin, setBMin] = useState("");
+  const [bMax, setBMax] = useState("");
   const [resetText, setResetText] = useState("");
+  const [pinFor, setPinFor] = useState(null);
+  const [pinValue, setPinValue] = useState("");
 
   const load = useCallback(async () => {
     const r = await api();
     if (r.status === 401) { onLoggedOut?.(); return; }
     if (!r.ok) { setNotice({ kind: "error", text: r.data.error }); return; }
     setD(r.data);
-    setBudget(r.data.budget || "");
+    setBMin(r.data.budgetMin || "");
+    setBMax(r.data.budgetMax || "");
   }, [onLoggedOut]);
 
   useEffect(() => { load(); }, [load]);
@@ -69,12 +74,16 @@ export default function SantaHost({ onLoggedOut }) {
             ))}
           </div>
         </div>
-        <form className="budget" onSubmit={(e) => { e.preventDefault(); act({ action: "setBudget", budget }, budget ? `Budget set to ${budget}.` : "Budget removed."); }}>
-          <label htmlFor="ss-budget" className="small"><strong>Gift budget</strong> (shown on the page)</label>
+        <form className="budget" onSubmit={(e) => { e.preventDefault(); act({ action: "setBudget", min: bMin, max: bMax }, bMin || bMax ? "Budget saved." : "Budget removed."); }}>
+          <span className="small"><strong>Gift budget</strong> (shown on the page)</span>
           <div className="row">
-            <input id="ss-budget" value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="e.g. $25" style={{ maxWidth: 140 }} />
+            <label htmlFor="ss-bmin" className="small">Min</label>
+            <input id="ss-bmin" value={bMin} onChange={(e) => setBMin(e.target.value)} placeholder="$20" inputMode="decimal" style={{ maxWidth: 90 }} />
+            <label htmlFor="ss-bmax" className="small">Max</label>
+            <input id="ss-bmax" value={bMax} onChange={(e) => setBMax(e.target.value)} placeholder="$40" inputMode="decimal" style={{ maxWidth: 90 }} />
             <button className="btn" type="submit">Save</button>
           </div>
+          {d.budget && <span className="small muted">Guests see: Gift budget: {d.budget}</span>}
         </form>
       </div>
 
@@ -118,9 +127,10 @@ export default function SantaHost({ onLoggedOut }) {
         {!drawn && !adding && <button className="link" onClick={() => setAdding(true)}>+ Add someone</button>}
       </div>
       {adding && (
-        <form className="row" onSubmit={async (e) => { e.preventDefault(); if (await act({ action: "save", entry: { name: newName, household: newHouse } }, `Added ${newName}.`)) { setAdding(false); setNewName(""); setNewHouse(""); } }}>
+        <form className="row" onSubmit={async (e) => { e.preventDefault(); if (await act({ action: "save", entry: { name: newName, household: newHouse, pin: newPin } }, `Added ${newName}.${newPin ? " Tell them their PIN privately." : " Set a PIN so they can see their match."}`)) { setAdding(false); setNewName(""); setNewHouse(""); setNewPin(""); } }}>
           <input aria-label="Name" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Name" style={{ maxWidth: 180 }} />
           <input aria-label="Household" value={newHouse} onChange={(e) => setNewHouse(e.target.value)} placeholder="Household (optional)" style={{ maxWidth: 180 }} />
+          <input aria-label="PIN" inputMode="numeric" maxLength={4} value={newPin} onChange={(e) => setNewPin(e.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="PIN" style={{ maxWidth: 90 }} />
           <button className="btn" type="submit" disabled={!newName.trim()}>Add</button>
           <button type="button" className="link" onClick={() => setAdding(false)}>Cancel</button>
         </form>
@@ -132,6 +142,14 @@ export default function SantaHost({ onLoggedOut }) {
               <div className="host-row">
                 <div>
                   <strong>{e.name}</strong>{e.household && <span className="small muted"> · {e.household} household</span>}
+                  {!e.hasPin && <span className="pill maybe" title="They need a PIN to see their match">No PIN</span>}
+                  {pinFor === e.id && (
+                    <form className="row" style={{ marginTop: 6 }} onSubmit={async (ev) => { ev.preventDefault(); if (await act({ action: "setPin", id: e.id, pin: pinValue }, `PIN set for ${e.name}. Tell them privately.`)) { setPinFor(null); setPinValue(""); } }}>
+                      <input aria-label={`New PIN for ${e.name}`} inputMode="numeric" maxLength={4} className="pin-input" value={pinValue} onChange={(x) => setPinValue(x.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="1234" />
+                      <button className="btn" type="submit" disabled={pinValue.length !== 4}>Save PIN</button>
+                      <button type="button" className="link" onClick={() => { setPinFor(null); setPinValue(""); }}>Cancel</button>
+                    </form>
+                  )}
                   {openId === e.id && (
                     <div className="small" style={{ marginTop: 6 }}>
                       <p><strong>Wish list:</strong> {e.wishlist || <span className="muted">none</span>}</p>
@@ -142,6 +160,7 @@ export default function SantaHost({ onLoggedOut }) {
                 </div>
                 <div className="row">
                   <button className="link" onClick={() => setOpenId(openId === e.id ? null : e.id)}>{openId === e.id ? "Less" : "Details"}</button>
+                  <button className="link" onClick={() => { setPinFor(e.id); setPinValue(""); }}>{e.hasPin ? "Reset PIN" : "Set PIN"}</button>
                   {confirm === e.id ? (
                     <span className="confirm">Remove{drawn ? " (redraw after)" : ""}? <button className="link danger" onClick={async () => { setConfirm(null); await act({ action: "delete", id: e.id }, `Removed ${e.name}.`); }}>Yes</button> <button className="link" onClick={() => setConfirm(null)}>No</button></span>
                   ) : <button className="link" onClick={() => setConfirm(e.id)}>Remove</button>}
@@ -167,7 +186,7 @@ function ShareLink() {
   useEffect(() => { setUrl(`${window.location.origin}/xmas-ss-drawing`); }, []);
   return (
     <div className="share">
-      <span className="small"><strong>Send everyone this link</strong> to see who they got:</span>
+      <span className="small"><strong>Send everyone this link.</strong> They pick their name and enter their PIN:</span>
       <div className="row">
         <code className="share-url">{url}</code>
         <button type="button" className="btn" onClick={async () => {

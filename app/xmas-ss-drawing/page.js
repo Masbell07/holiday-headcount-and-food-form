@@ -1,4 +1,4 @@
-import SantaPage from "@/components/SantaPage";
+import SantaDrawing from "@/components/SantaDrawing";
 
 export const metadata = {
   title: "Secret Santa Drawing 2026",
@@ -9,5 +9,5 @@ export const metadata = {
 export const viewport = { themeColor: "#123524" };
 
 export default function Page() {
-  return <SantaPage variant="drawing" />;
+  return <SantaDrawing />;
 }

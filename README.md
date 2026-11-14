@@ -26,7 +26,7 @@ Guests RSVP, say how many adults and kids are coming, and claim dishes. The serv
 
 Each event has its own RSVPs, day vote, dish claims and must-haves. Days, times and must-haves live in `lib/events.js`. One host login works for both dashboards.
 
-Secret Santa sign-ups close automatically at the start of Thanksgiving (12:00 AM Central, Nov 26); the host can keep them open or close them early. On Thanksgiving, tap **Draw names** on `/host-xmas`: nobody gets themselves or someone from their household, then send everyone the `/xmas-ss-drawing` link. Each person sees their match privately on the device they signed up with; one phone can sign up several people, and each taps their own name to reveal.
+Secret Santa sign-ups close automatically at the start of Thanksgiving (12:00 AM Central, Nov 26); the host can keep them open or close them early. On Thanksgiving, tap **Draw names** on `/host-xmas`: nobody gets themselves or someone from their household, then send everyone the `/xmas-ss-drawing` link. Everyone picks a secret 4-number PIN when they sign up (one phone can sign up several people, each with their own PIN). On the drawing page they choose their name and enter their PIN to see their match, from any phone. Five wrong PINs lock that name for 15 minutes; the host can set or reset anyone's PIN. PINs are stored only as salted hashes. The host can also set a minimum and maximum gift budget.
 
 ## Host dashboard
 
