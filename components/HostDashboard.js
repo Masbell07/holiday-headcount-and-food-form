@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DISH_TYPES } from "@/lib/dish";
 import { EVENTS, getEvent } from "@/lib/events";
+import SantaHost from "@/components/SantaHost";
 import { dishKey } from "@/lib/dish";
 
 const STATUS_LABEL = { yes: "Coming", maybe: "Maybe", no: "Can't make it" };
@@ -163,6 +164,8 @@ export default function HostDashboard({ eventId }) {
           ))}
         </ul>
       </section>
+
+      {EV.id === "xmas" && <SantaHost onLoggedOut={() => setState("login")} />}
 
       <section className="card host-card danger-zone">
         <h2>Start over</h2>

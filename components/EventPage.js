@@ -254,6 +254,7 @@ export default function EventPage({ eventId }) {
           {!CHOSEN && <p className="where">{EV.timesLine}</p>}
           {EVENT.place && <p className="where">{EVENT.place}</p>}
           {EVENT.host && <p className="where">Hosted by {EVENT.host}</p>}
+          {EV.id === "xmas" && <p className="where"><a className="hero-link" href="/xmas-ss">🎁 Join our Secret Santa →</a></p>}
           <a href="#rsvp" className="cta" onClick={(e) => { e.preventDefault(); goToForm(true); }}>{myRsvp ? "See my RSVP" : CHOSEN ? "RSVP" : "RSVP & vote"}</a>
         </div>
       </header>
