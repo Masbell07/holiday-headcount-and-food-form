@@ -533,3 +533,13 @@ body:has(.theme-xmas) { background: #F3F1EA; }
 .name-go { font-size: 26px; line-height: 1; color: var(--cran); }
 .pin-panel { display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border-radius: 12px; border: 2px solid var(--sage); background: #F2F7F3; }
 .pin-head { display: flex; justify-content: space-between; align-items: center; font-size: 17px; }
+/* Once the host picks the day, only that day shows */
+.chosen-day {
+  display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px;
+  padding: 22px 16px; border-radius: 14px; border: 1.5px solid var(--sage); background: #F3F6EC;
+}
+.theme-xmas .chosen-day { background: #EAF3EC; }
+.chosen-name { font-family: var(--display); font-size: 40px; font-weight: 600; line-height: 1.1; color: var(--ink); }
+.chosen-date { font-size: 18px; color: var(--muted); }
+.chosen-time { font-family: var(--display); font-size: 26px; font-weight: 600; color: var(--cran); margin-top: 4px; }
+@media (max-width: 560px) { .chosen-name { font-size: 34px; } }

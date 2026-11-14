@@ -273,19 +273,25 @@ export default function EventPage({ eventId }) {
         <div className="musts-head">
           <div>
             <h2 id="vote-h">{CHOSEN ? "The day is set" : "Pick the day"}</h2>
-            <p>{CHOSEN ? `Dinner is ${CHOSEN.day}, ${CHOSEN.date} at ${CHOSEN.time}.` : `One vote per household. ${EV.timesShort}`}</p>
+            <p>{CHOSEN ? "Save the date! See you there." : `One vote per household. ${EV.timesShort}`}</p>
           </div>
           {!CHOSEN && <span className="progress-n"><strong>{votes.total}</strong> {votes.total === 1 ? "vote" : "votes"} so far</span>}
         </div>
-        <ul className="day-list">
+        {CHOSEN ? (
+          <div className="chosen-day">
+            <span className="chosen-name">{CHOSEN.day}</span>
+            <span className="chosen-date">{CHOSEN.date.replace(EV.month[0], EV.month[1])}{CHOSEN.note ? ` · ${CHOSEN.note}` : ""}</span>
+            <span className="chosen-time">{CHOSEN.time}</span>
+          </div>
+        ) : (
+          <ul className="day-list">
           {votes.rows.map((d) => {
-            const leading = !CHOSEN && votes.top > 0 && d.households === votes.top;
-            const isChosen = CHOSEN?.id === d.id;
+            const leading = votes.top > 0 && d.households === votes.top;
             return (
-              <li key={d.id} className={`${leading || isChosen ? "lead" : ""} ${CHOSEN && !isChosen ? "dim" : ""}`}>
+              <li key={d.id} className={leading ? "lead" : ""}>
                 <div className="day-top">
                   <span className="day-name">{d.day}</span>
-                  {isChosen ? <span className="tag ok">It's this day</span> : leading && <span className="tag ok">{votes.rows.filter((r) => r.households === votes.top).length > 1 ? "Tied" : "Leading"}</span>}
+                  {leading && <span className="tag ok">{votes.rows.filter((r) => r.households === votes.top).length > 1 ? "Tied" : "Leading"}</span>}
                 </div>
                 <span className="day-date">{d.date}{d.note ? ` · ${d.note}` : ""} · <strong>{d.time}</strong></span>
                 <span className="bar"><span style={{ width: votes.total ? `${(d.households / votes.total) * 100}%` : "0%" }} /></span>
@@ -293,15 +299,14 @@ export default function EventPage({ eventId }) {
                   {d.households} {d.households === 1 ? "vote" : "votes"}{d.people ? ` · ${d.people} ${d.people === 1 ? "person" : "people"}` : ""}
                 </span>
                 {d.names.length > 0 && <span className="day-names">{d.names.join(", ")}</span>}
-                {!CHOSEN && (
-                  myDay === d.id
-                    ? <span className="your-vote">Your vote</span>
-                    : <button type="button" className="grab" onClick={() => voteFor(d.id)} aria-label={`Vote for ${d.day}`}>Vote {d.day.slice(0, 3)}</button>
-                )}
+                {myDay === d.id
+                  ? <span className="your-vote">Your vote</span>
+                  : <button type="button" className="grab" onClick={() => voteFor(d.id)} aria-label={`Vote for ${d.day}`}>Vote {d.day.slice(0, 3)}</button>}
               </li>
             );
           })}
         </ul>
+        )}
       </section>
 
       <section className="musts" aria-labelledby="must-h">
