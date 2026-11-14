@@ -522,3 +522,14 @@ body:has(.theme-xmas) { background: #F3F1EA; }
 .share-url { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 13px; overflow-wrap: anywhere; flex: 1; min-width: 0; }
 .santa-main > .card .btn[href] { align-self: flex-start; text-decoration: none; }
 .pin-input { max-width: 140px; letter-spacing: 0.4em; font-size: 20px; text-align: center; }
+.draw-names { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.name-btn {
+  width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  padding: 14px 16px; min-height: 56px; border-radius: 12px; border: 1.5px solid var(--line); background: #fff;
+  font-size: 17px; font-weight: 700; text-align: left; cursor: pointer;
+}
+.name-btn:hover:not(:disabled) { border-color: var(--sage); background: #F2F7F3; }
+.name-btn:disabled { cursor: default; font-weight: 600; color: var(--ink); }
+.name-go { font-size: 26px; line-height: 1; color: var(--cran); }
+.pin-panel { display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border-radius: 12px; border: 2px solid var(--sage); background: #F2F7F3; }
+.pin-head { display: flex; justify-content: space-between; align-items: center; font-size: 17px; }

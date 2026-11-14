@@ -75,7 +75,7 @@ export default function SantaDrawing() {
           <p className="eyebrow">Our family gift exchange</p>
           <h1>Secret Santa <span>Drawing</span></h1>
           <p className="when">
-            {!info ? "" : drawn ? "Names have been drawn! Find your name and enter your PIN." : "Names haven't been drawn yet. Check back after Thanksgiving dinner."}
+            {!info ? "" : drawn ? "Names have been drawn! Tap your name and enter your PIN." : "Names haven't been drawn yet. Check back after Thanksgiving dinner."}
           </p>
           {info?.budget && <p className="where">Gift budget: <strong>{info.budget}</strong></p>}
         </div>
@@ -86,12 +86,6 @@ export default function SantaDrawing() {
       <section className="santa-main">
         {!info && !loadError ? (
           <p className="muted">Loading…</p>
-        ) : !drawn ? (
-          <div className="card">
-            <h2>Not drawn yet</h2>
-            <p className="muted">We'll draw names after Thanksgiving dinner. This page checks for you every few seconds, so you can leave it open.</p>
-            {info?.open && <a className="btn" href="/xmas-ss">Not signed up? Join Secret Santa</a>}
-          </div>
         ) : result ? (
           <div className="card reveal">
             <p className="eyebrow">{result.name}, you're Secret Santa for</p>
@@ -104,24 +98,48 @@ export default function SantaDrawing() {
             <button type="button" className="btn wide" onClick={done}>Done, hide this</button>
           </div>
         ) : (
-          <form className="card" onSubmit={show} noValidate>
-            <h2>Who did you get?</h2>
-            <p className="muted small">Passing the phone around? Each person enters their own PIN, then taps "Done" before handing it on.</p>
-            <label htmlFor="who">Your name</label>
-            <select id="who" value={who} onChange={(e) => { setWho(e.target.value); setError(""); setTimeout(() => pinRef.current?.focus(), 0); }}>
-              <option value="">Choose your name</option>
-              {names.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-            <label htmlFor="pin">Your secret PIN</label>
-            <input id="pin" ref={pinRef} type="password" inputMode="numeric" pattern="[0-9]*" maxLength={4} autoComplete="off"
-              className="pin-input" placeholder="••••" value={pin}
-              onChange={(e) => { setPin(e.target.value.replace(/\D/g, "").slice(0, 4)); setError(""); }} />
-            {error && <p className="banner error" role="alert">{error}</p>}
-            <button className="btn wide" type="submit" disabled={!who || busy || (pin.length > 0 && pin.length < 4)}>
-              {busy ? "Checking…" : "Show my match"}
-            </button>
-            <p className="small muted">Forgot your PIN? Ask the host to reset it.</p>
-          </form>
+          <div className="card">
+            <h2>{drawn ? "Tap your name" : "Who's in"}</h2>
+            <p className="muted small">
+              {drawn
+                ? "Then enter your secret PIN to see who you got. Passing the phone around? Tap \"Done\" before handing it on."
+                : "Names haven't been drawn yet. After Thanksgiving dinner, tap your name here and enter your PIN to see who you got."}
+            </p>
+            {names.length === 0 ? (
+              <p className="muted">Nobody has signed up yet.</p>
+            ) : (
+              <ul className="draw-names">
+                {names.map((p) => (
+                  <li key={p.id}>
+                    {who === p.id && drawn ? (
+                      <form className="pin-panel" onSubmit={show} noValidate>
+                        <div className="pin-head">
+                          <strong>{p.name}</strong>
+                          <button type="button" className="link" onClick={() => { setWho(""); setPin(""); setError(""); }}>Not me</button>
+                        </div>
+                        <label htmlFor="pin">Enter your secret PIN</label>
+                        <div className="row">
+                          <input id="pin" ref={pinRef} type="password" inputMode="numeric" pattern="[0-9]*" maxLength={4} autoComplete="off"
+                            className="pin-input" placeholder="••••" value={pin}
+                            onChange={(e) => { setPin(e.target.value.replace(/\D/g, "").slice(0, 4)); setError(""); }} />
+                          <button className="btn" type="submit" disabled={busy || pin.length !== 4}>{busy ? "Checking…" : "Show my match"}</button>
+                        </div>
+                        {error && <p className="banner error" role="alert">{error}</p>}
+                        <p className="small muted">Forgot your PIN? Ask the host to reset it.</p>
+                      </form>
+                    ) : (
+                      <button type="button" className="name-btn" disabled={!drawn}
+                        onClick={() => { setWho(p.id); setPin(""); setError(""); setTimeout(() => pinRef.current?.focus(), 50); }}>
+                        <span>{p.name}</span>
+                        {drawn && <span className="name-go" aria-hidden="true">›</span>}
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {!drawn && info?.open && <a className="btn" href="/xmas-ss">Not signed up? Join Secret Santa</a>}
+          </div>
         )}
       </section>
 
