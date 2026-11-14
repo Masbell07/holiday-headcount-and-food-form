@@ -82,13 +82,15 @@ export default function SantaHost({ onLoggedOut }) {
         {!drawn ? (
           confirm === "draw" ? (
             <span className="confirm">Draw names for all {d.entries.length} people now? Everyone will see their match on their own phone.
-              <button className="btn" onClick={async () => { setConfirm(null); await act({ action: "draw" }, "Names are drawn! Everyone can see their match on /xmas-ss."); }}>Yes, draw</button>
+              <button className="btn" onClick={async () => { setConfirm(null); await act({ action: "draw" }, "Names are drawn! Send everyone the drawing link below."); }}>Yes, draw</button>
               <button className="link" onClick={() => setConfirm(null)}>Not yet</button>
             </span>
           ) : (
             <button className="btn" disabled={d.entries.length < 3} onClick={() => setConfirm("draw")}>🎁 Draw names ({d.entries.length})</button>
           )
         ) : (
+          <>
+          <ShareLink />
           <div className="row">
             <button className="link" onClick={() => setShowMatches((s) => !s)}>{showMatches ? "Hide matches" : "Show matches (spoilers!)"}</button>
             {confirm === "redo" ? (
@@ -98,6 +100,7 @@ export default function SantaHost({ onLoggedOut }) {
               <span className="confirm">Undo the drawing and reopen sign-ups? <button className="link danger" onClick={async () => { setConfirm(null); setShowMatches(false); await act({ action: "clearDraw" }, "Drawing cleared."); }}>Yes</button> <button className="link" onClick={() => setConfirm(null)}>No</button></span>
             ) : <button className="link" onClick={() => setConfirm("clear")}>Undo drawing</button>}
           </div>
+          </>
         )}
         {d.entries.length < 3 && !drawn && <p className="small muted">You need at least 3 people to draw.</p>}
       </div>
@@ -155,5 +158,22 @@ export default function SantaHost({ onLoggedOut }) {
         <button className="btn danger-btn" disabled={resetText !== "RESET"} onClick={async () => { if (await act({ action: "reset", confirm: "RESET" }, "Secret Santa cleared.")) setResetText(""); }}>Clear sign-ups</button>
       </div>
     </section>
+  );
+}
+
+function ShareLink() {
+  const [url, setUrl] = useState("/xmas-ss-drawing");
+  const [copied, setCopied] = useState(false);
+  useEffect(() => { setUrl(`${window.location.origin}/xmas-ss-drawing`); }, []);
+  return (
+    <div className="share">
+      <span className="small"><strong>Send everyone this link</strong> to see who they got:</span>
+      <div className="row">
+        <code className="share-url">{url}</code>
+        <button type="button" className="btn" onClick={async () => {
+          try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2500); } catch { setCopied(false); }
+        }}>{copied ? "Copied!" : "Copy link"}</button>
+      </div>
+    </div>
   );
 }

@@ -23,20 +23,28 @@ function daysLeft(ts) {
   return d === 1 ? "1 day left" : `${d} days left`;
 }
 
-export default function SantaPage() {
+export default function SantaPage({ variant = "signup" }) {
+  const isDrawing = variant === "drawing";
   const [info, setInfo] = useState(null);
   const [loadError, setLoadError] = useState("");
-  const [mine, setMine] = useState(null);       // { id, token }
-  const [me, setMe] = useState(null);           // { entry, match }
+  const [mine, setMine] = useState([]);          // [{ id, token }] for everyone signed up on this device
+  const [views, setViews] = useState({});        // id -> { entry, match }
   const [form, setForm] = useState(blank);
-  const [editing, setEditing] = useState(true);
+  const [formFor, setFormFor] = useState(null);  // null = closed, "new" = adding someone, or an id being edited
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
-  const [revealed, setRevealed] = useState(false);
-  const [confirmLeave, setConfirmLeave] = useState(false);
+  const [revealed, setRevealed] = useState(null); // id whose match is showing
+  const [confirmLeave, setConfirmLeave] = useState(null);
   const [isHostUser, setIsHostUser] = useState(false);
 
-  const load = useCallback(async (who) => {
+  const readMine = () => {
+    const list = store.get(MINE);
+    if (Array.isArray(list)) return list.filter((m) => m && m.id && m.token);
+    if (list && list.id) return [list]; // older single sign-up format
+    return [];
+  };
+
+  const load = useCallback(async (list) => {
     try {
       const res = await fetch("/api/ss", { cache: "no-store" });
       if (!res.ok) throw new Error();
@@ -45,21 +53,22 @@ export default function SantaPage() {
     } catch {
       setLoadError("Couldn't load Secret Santa. Check your connection and refresh.");
     }
-    const m = who === undefined ? store.get(MINE) : who;
-    if (m) {
+    const ms = list || readMine();
+    const kept = [];
+    const v = {};
+    for (const m of ms) {
       const r = await call({ action: "me", ...m });
-      if (r.ok) {
-        setMine(m); setMe(r.data);
-        setForm({ ...blank(), ...pick(r.data.entry) });
-        setEditing(false);
-      } else if (r.status === 404) {
-        store.del(MINE); setMine(null); setMe(null);
-      }
+      if (r.ok) { kept.push(m); v[m.id] = r.data; }
+      else if (r.status !== 404) kept.push(m); // keep on network trouble
     }
+    store.set(MINE, kept);
+    setMine(kept);
+    setViews(v);
+    return kept;
   }, []);
 
   useEffect(() => {
-    load();
+    load().then((kept) => { if (!kept.length && !isDrawing) setFormFor("new"); });
     fetch("/api/host/login", { cache: "no-store" }).then((r) => r.json()).then((d) => setIsHostUser(Boolean(d.host))).catch(() => {});
     const t = setInterval(() => load(), 30000);
     return () => clearInterval(t);
@@ -67,38 +76,59 @@ export default function SantaPage() {
 
   const update = (patch) => { setForm((f) => ({ ...f, ...patch })); setMessage(null); };
   const scrollToCard = () => setTimeout(() => document.getElementById("santa-card")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+  const people = mine.map((m) => views[m.id]).filter(Boolean);
+
+  function startAdd() {
+    const house = people.find((p) => p.entry.household)?.entry.household || "";
+    setForm({ ...blank(), household: house });
+    setFormFor("new"); setMessage(null); scrollToCard();
+  }
+  function startEdit(id) {
+    setForm({ ...blank(), ...pick(views[id].entry) });
+    setFormFor(id); setMessage(null); scrollToCard();
+  }
 
   async function submit(e) {
     e.preventDefault();
     if (saving) return;
     setSaving(true); setMessage(null);
-    const r = await call({ ...form, id: mine?.id, token: mine?.token });
+    const editing = formFor && formFor !== "new" ? mine.find((m) => m.id === formFor) : null;
+    const r = await call({ ...form, id: editing?.id, token: editing?.token });
     setSaving(false);
     if (!r.ok) { setMessage({ kind: "error", text: r.data.error || "Something went wrong. Try again." }); return; }
-    const m = { id: r.data.id, token: r.data.token };
-    store.set(MINE, m);
-    setMessage({ kind: "ok", text: mine ? "Saved your changes." : "You're in! Ho ho ho." });
-    await load(m);
+    const next = editing ? mine : [...mine, { id: r.data.id, token: r.data.token }];
+    store.set(MINE, next);
+    setMessage({ kind: "ok", text: editing ? `Saved changes for ${r.data.entry.name}.` : `${r.data.entry.name} is in! Ho ho ho.` });
+    setFormFor(null);
+    await load(next);
     scrollToCard();
   }
 
-  async function leave() {
-    const r = await call({ action: "delete", ...mine });
-    setConfirmLeave(false);
+  async function leave(id) {
+    const m = mine.find((x) => x.id === id);
+    const name = views[id]?.entry.name || "They";
+    const r = await call({ action: "delete", ...m });
+    setConfirmLeave(null);
     if (!r.ok) { setMessage({ kind: "error", text: r.data.error }); return; }
-    store.del(MINE); setMine(null); setMe(null); setForm(blank()); setEditing(true);
-    setMessage({ kind: "ok", text: "You've left Secret Santa." });
-    load(null);
+    const next = mine.filter((x) => x.id !== id);
+    store.set(MINE, next);
+    setMessage({ kind: "ok", text: `${name} left Secret Santa.` });
+    const kept = await load(next);
+    if (!kept.length) { setForm(blank()); setFormFor("new"); }
   }
 
   const open = info?.open;
   const drawn = info?.drawn;
   const left = info && daysLeft(info.closesAt);
-  const statusLine = drawn
+  const statusLine = isDrawing
+    ? (drawn ? "Names have been drawn! Tap your name to see who you got." : info ? "Names haven't been drawn yet. Check back after Thanksgiving dinner." : "")
+    : drawn
     ? "Names have been drawn!"
     : open
       ? info?.mode === "open" ? "Sign-ups are open" : `Sign-ups close Thanksgiving Day, Thu Nov 26${left ? ` · ${left}` : ""}`
       : info ? "Sign-ups are closed. We'll draw names on Thanksgiving." : "";
+  const showForm = !isDrawing && open && formFor;
+  const anyMatch = people.some((p) => p.match);
 
   return (
     <main className="theme-xmas santa">
@@ -106,77 +136,92 @@ export default function SantaPage() {
         <Snow />
         <div className="hero-inner">
           <p className="eyebrow">Our family gift exchange</p>
-          <h1>Secret Santa <span>2026</span></h1>
+          <h1>Secret Santa <span>{isDrawing ? "Drawing" : "2026"}</span></h1>
           <p className="when">{statusLine}</p>
           {info?.budget && <p className="where">Gift budget: <strong>{info.budget}</strong></p>}
-          <p className="where">Join if you want to take part. We'll draw names on Thanksgiving.</p>
-          <a href="#santa-card" className="cta" onClick={(e) => { e.preventDefault(); scrollToCard(); }}>
-            {me?.match ? "See who you got" : me ? "See my sign-up" : open ? "Join Secret Santa" : "See details"}
-          </a>
+          {!isDrawing && <p className="where">Join if you want to take part. We'll draw names on Thanksgiving.</p>}
+          {(!isDrawing || (drawn && people.length > 0)) && <a href="#santa-card" className="cta" onClick={(e) => { e.preventDefault(); scrollToCard(); }}>
+            {anyMatch ? "See who you got" : people.length ? "See my sign-ups" : open ? "Join Secret Santa" : "See details"}
+          </a>}
         </div>
       </header>
 
       <section className="stats santa-stats" aria-label="Sign-ups">
         <div className="stat"><span className="n">{info ? info.people.length : "–"}</span><span className="l">{info?.people.length === 1 ? "person in" : "people in"}</span></div>
-        <div className="stat"><span className="n">{drawn ? "✓" : open ? (left ? left.split(" ")[0] : "–") : "0"}</span><span className="l">{drawn ? "names drawn" : open ? (left ? "days to join" : "open") : "sign-ups closed"}</span></div>
+        <div className="stat"><span className="n">{drawn ? "✓" : open ? (left ? left.split(" ")[0] : "–") : "0"}</span><span className="l">{drawn ? "names drawn" : open ? (left ? (isDrawing ? "days to go" : "days to join") : "open") : "sign-ups closed"}</span></div>
       </section>
 
       {loadError && <p className="banner error">{loadError}</p>}
 
       <section className="santa-main" id="santa-card">
-        {me?.match ? (
-          <div className="card reveal">
-            <p className="eyebrow">You're Secret Santa for</p>
-            {revealed ? (
-              <>
-                <h2 className="reveal-name">{me.match.name}</h2>
-                {info?.budget && <p className="muted">Budget: {info.budget}</p>}
-                <Detail label="Wish list" text={me.match.wishlist} empty="No wish list yet. Ask around for ideas!" />
-                {me.match.sizes && <Detail label="Sizes" text={me.match.sizes} />}
-                {me.match.avoid && <Detail label="Please avoid" text={me.match.avoid} />}
-                <p className="small muted">Keep it secret! Only you can see this, on the device you signed up with.</p>
-                <button type="button" className="link" onClick={() => setRevealed(false)}>Hide</button>
-              </>
-            ) : (
-              <>
-                <p className="muted">Make sure nobody's looking over your shoulder.</p>
-                <button type="button" className="btn wide" onClick={() => setRevealed(true)}>Tap to reveal</button>
-              </>
-            )}
-          </div>
-        ) : me && !editing ? (
+        {people.length > 0 && (
           <div className="card done">
-            <p className="eyebrow">You're in</p>
-            <h2>{me.entry.name}</h2>
-            {drawn ? (
-              <p className="muted">Names have been drawn. Reload this page if you don't see your match.</p>
-            ) : (
-              <p className="muted">We'll draw names on Thanksgiving. Come back here afterwards to see who you got.</p>
-            )}
-            {me.entry.wishlist && <Detail label="Your wish list" text={me.entry.wishlist} />}
-            {me.entry.sizes && <Detail label="Sizes" text={me.entry.sizes} />}
-            {me.entry.avoid && <Detail label="Avoid" text={me.entry.avoid} />}
-            {message && <p className={`banner ${message.kind}`} role="status">{message.text}</p>}
-            {open && (
-              <div className="row">
-                <button type="button" className="btn" onClick={() => { setEditing(true); setMessage(null); }}>Edit my sign-up</button>
-                {confirmLeave ? (
-                  <span className="confirm">Leave Secret Santa? <button type="button" className="link danger" onClick={leave}>Yes, leave</button> <button type="button" className="link" onClick={() => setConfirmLeave(false)}>Stay in</button></span>
-                ) : (
-                  <button type="button" className="link" onClick={() => setConfirmLeave(true)}>Leave</button>
-                )}
-              </div>
+            <p className="eyebrow">{isDrawing && drawn ? "Who did you get?" : "Signed up on this device"}</p>
+            {message && !showForm && <p className={`banner ${message.kind}`} role="status">{message.text}</p>}
+            {drawn && people.length > 1 && <p className="small muted">Pass the phone so each person can tap their own name in private.</p>}
+            <ul className="device-people">
+              {people.map(({ entry, match }) => (
+                <li key={entry.id}>
+                  {match ? (
+                    revealed === entry.id ? (
+                      <div className="reveal">
+                        <p className="eyebrow">{entry.name}, you're Secret Santa for</p>
+                        <h2 className="reveal-name">{match.name}</h2>
+                        {info?.budget && <p className="muted">Budget: {info.budget}</p>}
+                        <Detail label="Wish list" text={match.wishlist} empty="No wish list yet. Ask around for ideas!" />
+                        {match.sizes && <Detail label="Sizes" text={match.sizes} />}
+                        {match.avoid && <Detail label="Please avoid" text={match.avoid} />}
+                        <p className="small muted">Keep it secret!</p>
+                        <button type="button" className="btn" onClick={() => setRevealed(null)}>Hide</button>
+                      </div>
+                    ) : (
+                      <div className="person-row">
+                        <strong>{entry.name}</strong>
+                        <button type="button" className="btn" onClick={() => setRevealed(entry.id)}>Reveal {entry.name}'s match</button>
+                      </div>
+                    )
+                  ) : (
+                    <div className="person-row">
+                      <div>
+                        <strong>{entry.name}</strong>
+                        {entry.household && <span className="small muted"> · {entry.household}</span>}
+                        <p className="small muted">{drawn ? "Not in this drawing. Ask the host." : isDrawing ? "Waiting for the drawing" : entry.wishlist ? "Wish list added" : "No wish list yet"}</p>
+                      </div>
+                      {open && !isDrawing && (
+                        confirmLeave === entry.id ? (
+                          <span className="confirm">Take {entry.name} out? <button type="button" className="link danger" onClick={() => leave(entry.id)}>Yes</button> <button type="button" className="link" onClick={() => setConfirmLeave(null)}>No</button></span>
+                        ) : (
+                          <span className="row">
+                            <button type="button" className="link" onClick={() => startEdit(entry.id)}>Edit</button>
+                            <button type="button" className="link" onClick={() => setConfirmLeave(entry.id)}>Remove</button>
+                          </span>
+                        )
+                      )}
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+            {!drawn && <p className="small muted">{isDrawing ? "Names haven't been drawn yet. This page updates on its own, so keep it open or check back after dinner." : "We'll draw names on Thanksgiving. Come back here on this device to see who each person got."}</p>}
+            {open && !isDrawing && formFor !== "new" && (
+              <button type="button" className="btn add-person" onClick={startAdd}>+ Add another person</button>
             )}
           </div>
-        ) : open ? (
+        )}
+
+        {showForm ? (
           <form className="card" onSubmit={submit} noValidate>
-            <h2>{mine ? "Edit your sign-up" : "Join Secret Santa"}</h2>
-            <p className="muted small">Only your name shows on this page. Your wish list goes to whoever draws you.</p>
-            <label htmlFor="ss-name">Your name</label>
-            <input id="ss-name" value={form.name} onChange={(e) => update({ name: e.target.value })} placeholder="e.g. Aunt Linda" autoComplete="name" required />
+            <h2>{formFor !== "new" ? `Edit ${views[formFor]?.entry.name || "sign-up"}` : people.length ? "Add another person" : "Join Secret Santa"}</h2>
+            <p className="muted small">
+              {people.length && formFor === "new"
+                ? "Each person is entered and drawn separately."
+                : "Signing up with family? Add yourself first, then tap \"Add another person\". Only names show on this page; wish lists go to whoever draws that person."}
+            </p>
+            <label htmlFor="ss-name">Name</label>
+            <input id="ss-name" value={form.name} onChange={(e) => update({ name: e.target.value })} placeholder="e.g. Aunt Linda" autoComplete={people.length ? "off" : "name"} required />
             <label htmlFor="ss-house">Household <span className="opt">(optional)</span></label>
             <input id="ss-house" value={form.household} onChange={(e) => update({ household: e.target.value })} placeholder="e.g. Rhodes" />
-            <p className="hint">People with the same household won't draw each other.</p>
+            <p className="hint">People with the same household won't draw each other. Leave it blank if you don't mind.</p>
             <label htmlFor="ss-wish">Wish list <span className="opt">(optional)</span></label>
             <textarea id="ss-wish" rows={4} value={form.wishlist} onChange={(e) => update({ wishlist: e.target.value })} placeholder="Gift ideas, favorite stores, hobbies, links…" />
             <label htmlFor="ss-sizes">Sizes <span className="opt">(optional)</span></label>
@@ -185,11 +230,23 @@ export default function SantaPage() {
             <input id="ss-avoid" value={form.avoid} onChange={(e) => update({ avoid: e.target.value })} placeholder="e.g. Nut allergy, no candles" />
             {message && <p className={`banner ${message.kind}`} role="status">{message.text}</p>}
             <div className="row">
-              <button className="btn" type="submit" disabled={saving || !form.name.trim()}>{saving ? "Saving…" : mine ? "Save changes" : "Count me in"}</button>
-              {mine && <button type="button" className="link" onClick={() => { setForm({ ...blank(), ...pick(me.entry) }); setEditing(false); setMessage(null); }}>Cancel</button>}
+              <button className="btn" type="submit" disabled={saving || !form.name.trim()}>
+                {saving ? "Saving…" : formFor !== "new" ? "Save changes" : people.length ? "Add to Secret Santa" : "Count me in"}
+              </button>
+              {people.length > 0 && <button type="button" className="link" onClick={() => { setFormFor(null); setMessage(null); }}>Cancel</button>}
             </div>
           </form>
-        ) : info ? (
+        ) : isDrawing && !people.length && info ? (
+          <div className="card">
+            <h2>{drawn ? "We couldn't find your sign-up here" : "Not drawn yet"}</h2>
+            <p className="muted">
+              {drawn
+                ? "Your match is saved on the phone and browser you used to sign up. Open this link on that device. Still stuck? Ask the host, who can look it up for you."
+                : "Names will be drawn after Thanksgiving dinner. This page will show who you got."}
+            </p>
+            {!drawn && open && <a className="btn" href="/xmas-ss">Join Secret Santa</a>}
+          </div>
+        ) : !people.length && info && !open ? (
           <div className="card">
             <h2>{drawn ? "Names have been drawn" : "Sign-ups are closed"}</h2>
             <p className="muted">
@@ -197,11 +254,10 @@ export default function SantaPage() {
                 ? "If you signed up, open this page on the phone or tablet you used to sign up to see who you got."
                 : "Sign-ups ended on Thanksgiving. Missed it? Ask the host. They can still add you before the drawing."}
             </p>
-            {message && <p className={`banner ${message.kind}`} role="status">{message.text}</p>}
           </div>
-        ) : (
+        ) : !info && !loadError ? (
           <p className="muted">Loading…</p>
-        )}
+        ) : null}
       </section>
 
       <section className="guests">
@@ -210,20 +266,20 @@ export default function SantaPage() {
           <p className="muted">Nobody yet. Be the first!</p>
         ) : (
           <ul className="name-chips">
-            {info.people.map((p) => <li key={p.id} className={p.id === mine?.id ? "mine" : ""}>{p.name}{p.id === mine?.id ? " (you)" : ""}</li>)}
+            {info.people.map((p) => { const here = mine.some((m) => m.id === p.id); return <li key={p.id} className={here ? "mine" : ""}>{p.name}{here ? " ✓" : ""}</li>; })}
           </ul>
         )}
       </section>
 
-      <section className="guests how">
+      {!isDrawing && <section className="guests how">
         <div className="section-head"><h2>How it works</h2></div>
         <ol>
-          <li>Join by Thanksgiving. Add a wish list if you'd like to help your Santa.</li>
+          <li>Join by Thanksgiving. You can sign up your partner or kids from the same phone; everyone is drawn separately.</li>
           <li>We draw names on Thanksgiving Day. Nobody gets themselves or someone from their household.</li>
-          <li>Come back to this page on the same phone to secretly see who you're shopping for.</li>
+          <li>Come back to this page on the same phone to secretly see who you're shopping for. Signed up a few people on one phone? Each person taps their own name to reveal their match.</li>
         </ol>
         <p><a className="link" href="/xmas">Christmas dinner RSVP →</a></p>
-      </section>
+      </section>}
 
       <footer className="foot">
         Ho ho ho · Merry Christmas

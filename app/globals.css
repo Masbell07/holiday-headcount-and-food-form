@@ -511,3 +511,13 @@ body:has(.theme-xmas) { background: #F3F1EA; }
 .seg button + button { border-left: 1.5px solid var(--line); }
 .seg button { line-height: 1.25; }
 .hero-link { color: var(--gold); font-weight: 700; text-decoration: none; } .hero-link:hover { text-decoration: underline; }
+.device-people { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.device-people > li { border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: #fff; }
+.person-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.person-row p { margin: 2px 0 0; }
+.device-people .reveal { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+.add-person { align-self: flex-start; background: var(--sage); }
+.santa-main { display: flex; flex-direction: column; gap: 16px; }
+.share { display: flex; flex-direction: column; gap: 6px; }
+.share-url { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 13px; overflow-wrap: anywhere; flex: 1; min-width: 0; }
+.santa-main > .card .btn[href] { align-self: flex-start; text-decoration: none; }
