@@ -83,6 +83,71 @@ function Progress({ label, done, total, tone }) {
   );
 }
 
+function useForm(init) {
+  const [f, setF] = useState(init);
+  return [f, (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value })), setF];
+}
+
+function FormShell({ onSubmit, onCancel, label, children, busy }) {
+  return (
+    <form className="co-form" onSubmit={onSubmit}>
+      {children}
+      <div className="co-formBtns">
+        <button className="co-btn" disabled={busy}>{busy ? "Saving…" : label}</button>
+        <button type="button" className="co-link" onClick={onCancel}>Cancel</button>
+      </div>
+    </form>
+  );
+}
+
+function StopForm({ init, label, onSave, onCancel }) {
+  const [f, bind] = useForm({ time: "", name: "", where: "", link: "", note: "", ...init });
+  const [busy, setBusy] = useState(false);
+  return (
+    <FormShell label={label} busy={busy} onCancel={onCancel} onSubmit={async (e) => { e.preventDefault(); if (!f.name.trim()) return; setBusy(true); const ok = await onSave(f); setBusy(false); if (ok) onCancel(); }}>
+      <div className="co-two">
+        <label>When<input placeholder="3 PM, Sunrise, Lunch…" value={f.time} onChange={bind("time")} /></label>
+        <label>What<input placeholder="Hot cocoa in Woodland Park" value={f.name} onChange={bind("name")} required autoFocus /></label>
+      </div>
+      <label>Where<input placeholder="Place or address" value={f.where} onChange={bind("where")} /></label>
+      <label>Link <span className="co-opt">reservation, menu, map, tickets</span><input inputMode="url" placeholder="https://…" value={f.link} onChange={bind("link")} /></label>
+      <label>Notes<textarea rows={3} placeholder="Confirmation #, hours, what to order, who's driving…" value={f.note} onChange={bind("note")} /></label>
+    </FormShell>
+  );
+}
+
+function PackForm({ init, label, onSave, onCancel }) {
+  const [f, bind] = useForm({ name: "", cat: "Clothes", qty: "", note: "", who: "", ...init });
+  const [busy, setBusy] = useState(false);
+  const shared = !PERSONAL.includes(f.cat);
+  return (
+    <FormShell label={label} busy={busy} onCancel={onCancel} onSubmit={async (e) => { e.preventDefault(); if (!f.name.trim()) return; setBusy(true); const ok = await onSave(f); setBusy(false); if (ok) onCancel(); }}>
+      <div className="co-two rev">
+        <label>Item<input placeholder="Hiking poles" value={f.name} onChange={bind("name")} required autoFocus /></label>
+        <label>How many<input placeholder="2 pairs" value={f.qty} onChange={bind("qty")} /></label>
+      </div>
+      <div className="co-two even">
+        <label>Category<select value={f.cat} onChange={bind("cat")}>{CATS.map((c) => <option key={c}>{c}</option>)}</select></label>
+        {shared ? (
+          <label>Who&apos;s bringing it<select value={f.who} onChange={bind("who")}><option value="">Not decided</option><option value="m">Mel</option><option value="k">Nick</option><option value="b">Both of us</option></select></label>
+        ) : <p className="co-opt co-each">Each of you checks this off for yourself.</p>}
+      </div>
+      <label>Notes<textarea rows={2} placeholder="Brand, size, where it is, buy on the way…" value={f.note} onChange={bind("note")} /></label>
+    </FormShell>
+  );
+}
+
+function CamForm({ init, label, onSave, onCancel }) {
+  const [f, bind] = useForm({ name: "", note: "", ...init });
+  const [busy, setBusy] = useState(false);
+  return (
+    <FormShell label={label} busy={busy} onCancel={onCancel} onSubmit={async (e) => { e.preventDefault(); if (!f.name.trim()) return; setBusy(true); const ok = await onSave(f); setBusy(false); if (ok) onCancel(); }}>
+      <label>Gear<input placeholder="ND filter" value={f.name} onChange={bind("name")} required autoFocus /></label>
+      <label>Notes<textarea rows={2} placeholder="Which lens, settings, reminders…" value={f.note} onChange={bind("note")} /></label>
+    </FormShell>
+  );
+}
+
 export default function TripPage() {
   const [auth, setAuth] = useState("checking");
   const [trip, setTrip] = useState(null);
@@ -92,10 +157,8 @@ export default function TripPage() {
   const [cat, setCat] = useState("All");
   const [toast, setToast] = useState(null);
   const [burst, setBurst] = useState(0);
-  const [adding, setAdding] = useState(false);
-  const [stopForm, setStopForm] = useState({ time: "", name: "", where: "", note: "" });
-  const [packForm, setPackForm] = useState({ name: "", cat: "Clothes" });
-  const [camName, setCamName] = useState("");
+  const [adding, setAdding] = useState(null); // "stop" | "pack" | "cam"
+  const [editing, setEditing] = useState(null); // item id
   const pending = useRef(0);
 
   const load = useCallback(async () => {
@@ -149,6 +212,9 @@ export default function TripPage() {
     setToast({ text: `Removed ${item.name}`, undo: () => send({ op: "add", list, day: dayK, item }) });
   }
 
+  const edit = (list, id, fields) => send({ op: "edit", list, id, fields }, (s) => { Object.assign(findIn(s, list, id), fields); return s; });
+  const add = (list, item, dayK) => send({ op: "add", list, day: dayK, item });
+
   async function logout() { await api("/api/trip/login", { method: "DELETE" }); setAuth("login"); setTrip(null); }
 
   if (auth === "checking") return <div className="co co-loading"><p>Climbing to 9,165 ft…</p></div>;
@@ -184,7 +250,7 @@ export default function TripPage() {
       <nav className="co-nav" role="tablist">
         <div className="co-navIn">
           {[["plan", "Itinerary"], ["pack", "Packing"], ["cam", "Camera bag"]].map(([k, l]) => (
-            <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>{l}</button>
+            <button key={k} role="tab" aria-selected={tab === k} onClick={() => { setTab(k); setAdding(null); setEditing(null); }}>{l}</button>
           ))}
         </div>
       </nav>
@@ -200,7 +266,7 @@ export default function TripPage() {
                 const complete = d.stops.length && n === d.stops.length;
                 return (
                   <li key={d.k}>
-                    <button aria-pressed={d.k === day} className={complete ? "complete" : ""} onClick={() => { setDay(d.k); setAdding(false); }}>
+                    <button aria-pressed={d.k === day} className={complete ? "complete" : ""} onClick={() => { setDay(d.k); setAdding(null); setEditing(null); }}>
                       <span className="co-node">{complete ? "✓" : i + 1}</span>
                       <b>{d.d}</b><small>{d.date}</small>
                       <em>{n}/{d.stops.length}</em>
@@ -222,33 +288,35 @@ export default function TripPage() {
                   <button className="co-way" aria-pressed={s.done} aria-label={`${s.done ? "Undo" : "Mark done"}: ${s.name}`} onClick={() => set("stops", s.id, "done", !s.done, dayDone(D.k))}>
                     <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 10.5 L8.5 14 L15 6.5" /></svg>
                   </button>
-                  <div className="co-stopBody">
-                    <h3>{s.name}</h3>
-                    {s.where && <p className="co-where">{s.where}</p>}
-                    {s.note && <p className="co-note">{s.note}</p>}
-                  </div>
-                  <button className="co-x" onClick={() => remove("stops", s, D.k)} aria-label={`Remove ${s.name}`}>×</button>
+                  {editing === s.id ? (
+                    <div className="co-formWrap">
+                      <StopForm init={s} label="Save changes" onSave={(f) => edit("stops", s.id, { time: f.time, name: f.name, where: f.where, link: f.link, note: f.note })} onCancel={() => setEditing(null)} />
+                    </div>
+                  ) : (
+                    <>
+                      <div className="co-stopBody">
+                        <h3>{s.name}</h3>
+                        {s.where && <p className="co-where">{s.where}</p>}
+                        {s.note && <p className="co-note">{s.note}</p>}
+                        {s.link && <a className="co-ext" href={s.link} target="_blank" rel="noopener noreferrer">Open link ↗</a>}
+                      </div>
+                      <div className="co-acts">
+                        <button className="co-edit" onClick={() => { setEditing(s.id); setAdding(null); }}>Edit</button>
+                        <button className="co-x" onClick={() => remove("stops", s, D.k)} aria-label={`Remove ${s.name}`}>×</button>
+                      </div>
+                    </>
+                  )}
                 </li>
               ))}
               <li className="co-addRow">
                 <span className="co-when" />
                 <span className="co-way ghost">+</span>
-                {adding ? (
-                  <form className="co-stopForm" onSubmit={async (e) => {
-                    e.preventDefault();
-                    if (!stopForm.name.trim()) return;
-                    if (await send({ op: "add", list: "stops", day: D.k, item: stopForm })) { setStopForm({ time: "", name: "", where: "", note: "" }); setAdding(false); }
-                  }}>
-                    <div className="co-two">
-                      <label>When<input placeholder="3 PM" value={stopForm.time} onChange={(e) => setStopForm({ ...stopForm, time: e.target.value })} /></label>
-                      <label>What<input placeholder="Hot cocoa in Woodland Park" value={stopForm.name} onChange={(e) => setStopForm({ ...stopForm, name: e.target.value })} required /></label>
-                    </div>
-                    <label>Where<input value={stopForm.where} onChange={(e) => setStopForm({ ...stopForm, where: e.target.value })} /></label>
-                    <label>Notes<input value={stopForm.note} onChange={(e) => setStopForm({ ...stopForm, note: e.target.value })} /></label>
-                    <div className="co-formBtns"><button className="co-btn">Add to {D.d}</button><button type="button" className="co-link" onClick={() => setAdding(false)}>Cancel</button></div>
-                  </form>
+                {adding === "stop" ? (
+                  <div className="co-formWrap">
+                    <StopForm label={`Add to ${D.d}`} onSave={(f) => add("stops", f, D.k)} onCancel={() => setAdding(null)} />
+                  </div>
                 ) : (
-                  <button className="co-addStop" onClick={() => setAdding(true)}>Add a stop to {D.d}</button>
+                  <button className="co-addStop" onClick={() => { setAdding("stop"); setEditing(null); }}>Add a stop to {D.d}</button>
                 )}
               </li>
             </ol>
@@ -264,7 +332,7 @@ export default function TripPage() {
               <p className="co-cheer">{cheer(trip.pack.filter((x) => (isP(x) ? x.m && x.k : x.done)).length, trip.pack.length)}</p>
               <p className="co-soft co-small">Clothes, outdoor and health: tap your own name. Car, fishing and fun gear is shared: tap the tag to pick Mel, Nick or both.</p>
               <div className="co-chips">
-                {["All", ...CATS].map((c) => <button key={c} aria-pressed={c === cat} onClick={() => { setCat(c); if (c !== "All") setPackForm((f) => ({ ...f, cat: c })); }}>{c}</button>)}
+                {["All", ...CATS].map((c) => <button key={c} aria-pressed={c === cat} onClick={() => setCat(c)}>{c}</button>)}
               </div>
             </aside>
             <div>
@@ -276,10 +344,17 @@ export default function TripPage() {
                     <h3>{c}<span>{PERSONAL.includes(c) ? "each of us" : "shared"}</span></h3>
                     <ul className="co-list">
                       {its.map((it) => {
+                        if (editing === it.id) return (
+                          <li key={it.id} className="co-editing">
+                            <PackForm init={it} label="Save changes" onSave={(f) => edit("pack", it.id, { name: f.name, cat: f.cat, qty: f.qty, note: f.note, who: f.who })} onCancel={() => setEditing(null)} />
+                          </li>
+                        );
                         const done = isP(it) ? it.m && it.k : it.done;
                         return (
                           <li key={it.id} className={done ? "done" : ""}>
-                            <div className="co-nm"><span>{it.name}</span>{it.note && <small>{it.note}</small>}</div>
+                            <button className="co-nm" onClick={() => { setEditing(it.id); setAdding(null); }} aria-label={`Edit ${it.name}`}>
+                              <span>{it.qty && <em className="co-qty">{it.qty}</em>}{it.name}</span>{it.note && <small>{it.note}</small>}
+                            </button>
                             {isP(it) ? (
                               <div className="co-who">
                                 {[["m", "Mel"], ["k", "Nick"]].map(([w, lab]) => (
@@ -300,15 +375,12 @@ export default function TripPage() {
                   </div>
                 );
               })}
-              <form className="co-addLine" onSubmit={async (e) => {
-                e.preventDefault();
-                if (!packForm.name.trim()) return;
-                if (await send({ op: "add", list: "pack", item: packForm })) setPackForm((f) => ({ ...f, name: "" }));
-              }}>
-                <input placeholder="Add something to pack" aria-label="New packing item" value={packForm.name} onChange={(e) => setPackForm({ ...packForm, name: e.target.value })} />
-                <select aria-label="Category" value={packForm.cat} onChange={(e) => setPackForm({ ...packForm, cat: e.target.value })}>{CATS.map((c) => <option key={c}>{c}</option>)}</select>
-                <button className="co-btn">Add</button>
-              </form>
+              {adding === "pack" ? (
+                <PackForm init={{ cat: cat === "All" ? "Clothes" : cat }} label="Add to the list" onSave={(f) => add("pack", f)} onCancel={() => setAdding(null)} />
+              ) : (
+                <button className="co-addBig" onClick={() => { setAdding("pack"); setEditing(null); }}>+ Add something to pack</button>
+              )}
+              <p className="co-opt co-tapnote">Tap any item&apos;s name to edit it.</p>
               <button className="co-link" onClick={() => send({ op: "uncheck", list: "pack" })}>Uncheck everything for the trip home</button>
             </div>
           </section>
@@ -322,22 +394,24 @@ export default function TripPage() {
             </aside>
             <div>
               <ul className="co-list">
-                {trip.cam.map((it) => (
+                {trip.cam.map((it) => editing === it.id ? (
+                  <li key={it.id} className="co-editing">
+                    <CamForm init={it} label="Save changes" onSave={(f) => edit("cam", it.id, { name: f.name, note: f.note })} onCancel={() => setEditing(null)} />
+                  </li>
+                ) : (
                   <li key={it.id} className={it.done ? "done" : ""}>
-                    <div className="co-nm"><span>{it.name}</span>{it.note && <small>{it.note}</small>}</div>
+                    <button className="co-nm" onClick={() => { setEditing(it.id); setAdding(null); }} aria-label={`Edit ${it.name}`}><span>{it.name}</span>{it.note && <small>{it.note}</small>}</button>
                     <button className="co-tog all" aria-pressed={it.done} aria-label={`Packed ${it.name}`} onClick={() => set("cam", it.id, "done", !it.done, (s) => s.cam.every((x) => x.done))}>Packed</button>
                     <button className="co-x" onClick={() => remove("cam", it)} aria-label={`Remove ${it.name}`}>×</button>
                   </li>
                 ))}
               </ul>
-              <form className="co-addLine" onSubmit={async (e) => {
-                e.preventDefault();
-                if (!camName.trim()) return;
-                if (await send({ op: "add", list: "cam", item: { name: camName } })) setCamName("");
-              }}>
-                <input placeholder="Add gear" aria-label="New gear item" value={camName} onChange={(e) => setCamName(e.target.value)} />
-                <button className="co-btn">Add</button>
-              </form>
+              {adding === "cam" ? (
+                <CamForm label="Add to the bag" onSave={(f) => add("cam", f)} onCancel={() => setAdding(null)} />
+              ) : (
+                <button className="co-addBig" onClick={() => { setAdding("cam"); setEditing(null); }}>+ Add gear</button>
+              )}
+              <p className="co-opt co-tapnote">Tap any item&apos;s name to edit it.</p>
               <button className="co-link" onClick={() => send({ op: "uncheck", list: "cam" })}>Uncheck everything</button>
             </div>
           </section>
