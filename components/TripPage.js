@@ -291,7 +291,7 @@ function CabinInfo({ house, owner, onSaveCode }) {
   );
 }
 
-const MEL_NICK = [{ key: "m", label: "Mel" }, { key: "k", label: "Nick" }];
+const MEL_ONLY = [{ key: "m", label: "Mel" }];
 
 function Toggles({ it, members, onSet }) {
   const solo = members.length === 1;
@@ -435,19 +435,20 @@ export default function TripPage() {
   if (auth === "login") return <div className="co"><Login onIn={load} /></div>;
   if (!trip || !who) return null;
   const owner = who.role === "owner";
+  const camOk = who.user === "mel";
   const members = who.members;
 
   const P = trip.pack.filter(isP), SH = trip.pack.filter((x) => !isP(x));
   const packed = (x) => (isP(x) ? members.every((m) => x[m.key]) : members.some((m) => x[m.key]));
   const allPackDone = (s) => s.pack.every(packed);
   const dayDone = (k) => (s) => s.days.find((d) => d.k === k).stops.every((x) => x.done);
-  const camDone = owner ? trip.cam.filter((x) => x.m || x.k).length : 0;
+  const camDone = camOk && trip.cam ? trip.cam.filter((x) => x.m).length : 0;
   const shownCats = cat === "All" ? CATS : [cat];
   const dayIndex = trip.days.findIndex((d) => d.k === D.k);
   const sun = sunTimes(DATES[D.k], DIVIDE[0], DIVIDE[1]);
   const wx = weather?.days?.[DATES[D.k]];
 
-  const tabs = [["plan", "Trip", Icon.trip], ["ideas", "Ideas", Icon.ideas], ["pack", "Pack", Icon.pack], ["cabin", "Cabin", Icon.house], ...(owner ? [["cam", "Camera", Icon.cam]] : [])];
+  const tabs = [["plan", "Trip", Icon.trip], ["ideas", "Ideas", Icon.ideas], ["pack", "Pack", Icon.pack], ["cabin", "Cabin", Icon.house], ...(camOk ? [["cam", "Camera", Icon.cam]] : [])];
   const tallyRows = members.length === 1
     ? [[who.name, trip.pack.filter(packed).length, trip.pack.length, "t0"]]
     : [...members.map((m, i) => [m.label, P.filter((x) => x[m.key]).length, P.length, `t${i}`]), ["Shared", SH.filter((x) => members.some((m) => x[m.key])).length, SH.length, "shared"]];
@@ -470,7 +471,7 @@ export default function TripPage() {
         </div>
       </header>
 
-      <nav className={`co-tabs${owner ? " five" : ""}`} aria-label="Sections">
+      <nav className={`co-tabs${camOk ? " five" : ""}`} aria-label="Sections">
         <div className="co-tabsIn">
           {tabs.map(([k, l, ic]) => (
             <button key={k} aria-current={tab === k ? "page" : undefined} onClick={() => { setTab(k); setReorder(false); }}>{ic}<span>{l}</span></button>
@@ -660,7 +661,7 @@ export default function TripPage() {
           </section>
         )}
 
-        {tab === "cam" && owner && (
+        {tab === "cam" && camOk && (
           <section className="co-pad">
             <Tally rows={[["In the bag", camDone, trip.cam.length, "shared"]]} />
             <div className="co-luggage film">
@@ -668,11 +669,11 @@ export default function TripPage() {
               <div className="co-tagHead"><h3>Camera bag</h3><span>{camDone}/{trip.cam.length}</span></div>
               <ul className="co-rows">
                 {trip.cam.map((it) => (
-                  <li key={it.id} className={it.m || it.k ? "done" : ""}>
+                  <li key={it.id} className={it.m ? "done" : ""}>
                     <button className="co-rowMain" onClick={() => setSheet({ kind: "cam", item: it })}>
                       <span className="co-rowName">{it.name}</span>{it.note && <small>{it.note}</small>}
                     </button>
-                    <Toggles it={it} members={MEL_NICK} onSet={(w, v) => set("cam", it.id, w, v, (s) => s.cam.every((x) => x.m || x.k))} />
+                    <Toggles it={it} members={MEL_ONLY} onSet={(w, v) => set("cam", it.id, w, v, (s) => s.cam.every((x) => x.m))} />
                     <button className="co-del" onClick={() => remove("cam", it)} aria-label={`Remove ${it.name}`}>×</button>
                   </li>
                 ))}
@@ -717,7 +718,7 @@ export default function TripPage() {
             onRemove={sheet.item ? () => remove("pack", sheet.item) : null} />
         </Sheet>
       )}
-      {sheet?.kind === "cam" && owner && (
+      {sheet?.kind === "cam" && camOk && (
         <Sheet title={sheet.item ? "Edit gear" : "Add gear"} onClose={closeSheet}>
           <CamForm init={sheet.item} label={sheet.item ? "Save" : "Add to the bag"} onClose={closeSheet}
             onSave={(f) => sheet.item ? edit("cam", sheet.item.id, { name: f.name, note: f.note }) : add("cam", f)}
