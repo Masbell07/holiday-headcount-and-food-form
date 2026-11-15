@@ -425,6 +425,12 @@ export default function TripPage() {
     return s;
   });
 
+  const shift = (id, dir) => send({ op: "shiftStop", id, dir }, (s) => {
+    const d = s.days.find((x) => x.stops.some((y) => y.id === id));
+    const i = d.stops.findIndex((y) => y.id === id), j = i + dir;
+    if (j >= 0 && j < d.stops.length) [d.stops[i], d.stops[j]] = [d.stops[j], d.stops[i]];
+    return s;
+  });
   const edit = (list, id, fields) => send({ op: "edit", list, id, fields }, (s) => { Object.assign(findIn(s, list, id), fields); return s; });
   const add = (list, item, dayK) => send({ op: "add", list, day: dayK, item });
   const closeSheet = useCallback(() => setSheet(null), []);
@@ -525,7 +531,7 @@ export default function TripPage() {
               <div className="co-back">
                 <div className="co-backHead">
                   <h3>The plan</h3>
-                  {owner && D.stops.length > 1 && <button className="co-linkBtn" onClick={() => setReorder((r) => !r)}>{reorder ? "Done reordering" : "Reorder"}</button>}
+                  {D.stops.length > 1 && <button className={`co-orderBtn${reorder ? " on" : ""}`} onClick={() => setReorder((r) => !r)}>{reorder ? "Done" : "⇅ Change order"}</button>}
                 </div>
                 <ol className="co-stops">
                   {D.stops.map((s, i) => {
@@ -550,8 +556,8 @@ export default function TripPage() {
                           </div>
                           {reorder ? (
                             <div className="co-order">
-                              <button disabled={i === 0} onClick={() => moveStop(s.id, D.k, i - 1)} aria-label={`Move ${s.name} up`}>▲</button>
-                              <button disabled={i === D.stops.length - 1} onClick={() => moveStop(s.id, D.k, i + 1)} aria-label={`Move ${s.name} down`}>▼</button>
+                              <button disabled={i === 0} onClick={() => shift(s.id, -1)} aria-label={`Move ${s.name} up`}>▲</button>
+                              <button disabled={i === D.stops.length - 1} onClick={() => shift(s.id, 1)} aria-label={`Move ${s.name} down`}>▼</button>
                             </div>
                           ) : (
                             <div className="co-acts">
@@ -576,7 +582,7 @@ export default function TripPage() {
                 <button className="co-writeIn" onClick={() => setSheet({ kind: "stop" })}>+ Write in a stop</button>
               </div>
             </article>
-            <p className="co-hint">Tap a stop&apos;s name to edit it or move it to another day.</p>
+            <p className="co-hint">Tap “Change order” to move stops up or down. Tap a stop&apos;s name to edit it or move it to another day.</p>
           </section>
         )}
 

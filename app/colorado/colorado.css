@@ -113,8 +113,10 @@
 .co-stop.done .co-stopName, .co-stop.done .co-where, .co-stop.done .co-note { opacity: .5; }
 .co-visited { position: absolute; right: 96px; top: 10px; padding: 0 10px; border: 3px double var(--stamp); border-radius: 6px; color: var(--stamp); font: 400 20px var(--display); transform: rotate(-12deg); opacity: .75; pointer-events: none; animation: co-stampIn .3s ease; }
 @keyframes co-stampIn { from { transform: rotate(-12deg) scale(1.6); opacity: 0; } }
+.co-orderBtn { min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1.5px solid var(--stamp); background: none; color: var(--stamp); font: 700 16px var(--cond); cursor: pointer; }
+.co-orderBtn.on { background: var(--stamp); color: #fff; }
 .co-order { display: flex; flex-direction: column; gap: 4px; }
-.co-order button { width: 40px; height: 32px; border: 1px solid #c8bba2; border-radius: 8px; background: #fbf7ee; color: var(--ink); cursor: pointer; font-size: 13px; }
+.co-order button { width: 44px; height: 38px; border: 1px solid #c8bba2; border-radius: 8px; background: #fbf7ee; color: var(--ink); cursor: pointer; font-size: 13px; }
 .co-order button:disabled { opacity: .3; cursor: default; }
 .co-leg { display: flex; align-items: center; gap: 8px; margin-left: 86px; padding: 6px 0; color: var(--inkSoft); font: 600 14px var(--cond); border-left: 2px dashed #c8bba2; padding-left: 12px; }
 .co-leg svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
