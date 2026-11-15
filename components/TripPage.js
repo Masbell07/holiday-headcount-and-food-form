@@ -353,12 +353,13 @@ export default function TripPage() {
                       {s.note && <span className="co-note">{s.note}</span>}
                     </button>
                     <button className="co-check" aria-pressed={s.done} aria-label={`${s.done ? "Undo" : "Done"}: ${s.name}`} onClick={() => set("stops", s.id, "done", !s.done, dayDone(D.k))}>{Icon.check}</button>
+                    <button className="co-del" onClick={() => remove("stops", s, D.k)} aria-label={`Remove ${s.name}`}>×</button>
                     {s.link && <a className="co-ext" href={s.link} target="_blank" rel="noopener noreferrer">Open link ↗</a>}
                   </li>
                 ))}
                 {!D.stops.length && <li className="co-emptyCard">Nothing planned yet. Tap + to add a stop.</li>}
               </ul>
-              <p className="co-hintline">Tap a card to edit it.</p>
+              <p className="co-hintline">Tap a card to edit it, or × to remove it.</p>
             </section>
           </>
         )}
@@ -396,6 +397,7 @@ export default function TripPage() {
                               {it.note && <small>{it.note}</small>}
                             </button>
                             <MelNick it={it} onSet={(w, v) => set("pack", it.id, w, v, allPackDone)} />
+                            <button className="co-del" onClick={() => remove("pack", it)} aria-label={`Remove ${it.name}`}>×</button>
                           </li>
                         );
                       })}
@@ -403,7 +405,7 @@ export default function TripPage() {
                   </div>
                 );
               })}
-              <p className="co-hintline">Tap your name when it&apos;s in your bag. Your own stuff needs both names; shared gear just needs one of you. Tap an item to edit it.</p>
+              <p className="co-hintline">Tap your name when it&apos;s in your bag. Your own stuff needs both names; shared gear just needs one of you. Tap an item to edit it, or × to remove it.</p>
               <button className="co-link" onClick={() => send({ op: "uncheck", list: "pack" })}>Uncheck everything for the trip home</button>
             </section>
           </>
@@ -422,6 +424,7 @@ export default function TripPage() {
                       <span className="co-rowName">{it.name}</span>{it.note && <small>{it.note}</small>}
                     </button>
                     <MelNick it={it} onSet={(w, v) => set("cam", it.id, w, v, (s) => s.cam.every((x) => x.m || x.k))} />
+                    <button className="co-del" onClick={() => remove("cam", it)} aria-label={`Remove ${it.name}`}>×</button>
                   </li>
                 ))}
               </ul>

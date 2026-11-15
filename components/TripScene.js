@@ -55,7 +55,7 @@ export default function TripScene({ className = "" }) {
           <stop offset="0" stopColor="#8a7570" /><stop offset=".5" stopColor="#5a4b49" /><stop offset="1" stopColor="#2f2827" />
         </linearGradient>
         <linearGradient id="cs-ground" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#0d1512" /><stop offset="1" stopColor="#060a08" />
+          <stop offset="0" stopColor="#0e1219" /><stop offset="1" stopColor="#0c0f14" />
         </linearGradient>
         <filter id="cs-grain"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" stitchTiles="stitch" /><feColorMatrix values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .05 0" /></filter>
       </defs>
@@ -86,8 +86,8 @@ export default function TripScene({ className = "" }) {
       <rect x="0" y="300" width="1600" height="160" fill="url(#cs-haze)" />
 
       {/* Middle ridge */}
-      <path d="M0 440 Q160 400 300 420 T600 410 Q760 380 900 420 T1200 412 Q1380 392 1600 430 V600 H0Z" fill="#1b2430" />
-      <path d={FAR_TREES} fill="#121a1d" />
+      <path d="M0 440 Q160 400 300 420 T600 410 Q760 380 900 420 T1200 412 Q1380 392 1600 430 V600 H0Z" fill="#1a2030" />
+      <path d={FAR_TREES} fill="#131820" />
 
       {/* Pikes Peak granite domes */}
       <path d="M1080 520 Q1090 452 1150 446 Q1196 444 1214 486 Q1240 470 1268 492 Q1290 512 1292 540 H1080Z" fill="url(#cs-granite)" />
@@ -100,7 +100,7 @@ export default function TripScene({ className = "" }) {
       {/* Ground, snow and near forest */}
       <path d="M0 540 Q400 510 800 530 T1600 520 V600 H0Z" fill="url(#cs-ground)" />
       <path d="M0 548 Q300 532 620 546 Q900 556 1180 538 Q1420 526 1600 540" stroke="#cfd6dc" strokeWidth="3" fill="none" opacity=".18" />
-      <path d={NEAR_TREES} fill="#050907" />
+      <path d={NEAR_TREES} fill="#07090d" />
 
       {/* Bare aspens */}
       <g stroke="#d9d4c8" strokeLinecap="round">

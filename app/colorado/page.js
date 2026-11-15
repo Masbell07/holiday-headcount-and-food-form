@@ -5,7 +5,7 @@ export const metadata = {
   title: "Divide, CO · Nov 19–22",
   robots: { index: false },
 };
-export const viewport = { themeColor: "#0b110f" };
+export const viewport = { themeColor: "#0c0f14" };
 
 export default function Page() {
   return (
