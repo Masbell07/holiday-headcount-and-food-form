@@ -1,19 +1,20 @@
 import { NextResponse } from "next/server";
-import { checkTripLogin, tripCookie, clearTripCookie, isTripper } from "@/lib/trip";
+import { checkTripLogin, tripCookie, clearTripCookie, tripUser } from "@/lib/trip";
 import { err, safe } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
-export const GET = safe(async (req) => NextResponse.json({ in: isTripper(req) }));
+export const GET = safe(async (req) => NextResponse.json({ in: Boolean(tripUser(req)) }));
 
 export const POST = safe(async (req) => {
   const { user, password } = await req.json().catch(() => ({}));
-  if (!checkTripLogin(user, password)) {
+  const who = checkTripLogin(user, password);
+  if (!who) {
     await new Promise((r) => setTimeout(r, 800)); // slow down guessing
-    return err("That username or password isn't right.", 401);
+    return err("That name or password isn't right.", 401);
   }
   const res = NextResponse.json({ in: true });
-  res.cookies.set(tripCookie());
+  res.cookies.set(tripCookie(who));
   return res;
 });
 

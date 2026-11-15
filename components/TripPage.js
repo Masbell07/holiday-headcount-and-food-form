@@ -118,7 +118,7 @@ function Login({ onIn }) {
 /* ---- Forms ---- */
 function useForm(init) {
   const [f, setF] = useState(init);
-  return [f, (k) => (ev) => setF((x) => ({ ...x, [k]: ev.target.value }))];
+  return [f, (k) => (ev) => setF((x) => ({ ...x, [k]: ev.target.value })), setF];
 }
 function useSubmit(f, onSave, onClose) {
   const [busy, setBusy] = useState(false);
@@ -144,8 +144,8 @@ function FormShell({ onSubmit, label, children, busy, onRemove, extra }) {
     </form>
   );
 }
-function StopForm({ init, label, onSave, onClose, onRemove, days, dayK, extra }) {
-  const [f, bind] = useForm({ time: "", name: "", where: "", link: "", note: "", day: dayK, ...init });
+function StopForm({ init, label, onSave, onClose, onRemove, days, dayK, extra, owner }) {
+  const [f, bind, setF] = useForm({ time: "", name: "", where: "", link: "", note: "", day: dayK, secret: false, ...init });
   const [busy, submit] = useSubmit(f, onSave, onClose);
   return (
     <FormShell label={label} busy={busy} onSubmit={submit} onRemove={onRemove} extra={extra}>
@@ -157,11 +157,12 @@ function StopForm({ init, label, onSave, onClose, onRemove, days, dayK, extra })
       <label>Where <span className="co-opt">used for directions and drive times</span><input placeholder="Place or address" value={f.where} onChange={bind("where")} /></label>
       <label>Link <span className="co-opt">reservation, menu, tickets</span><input inputMode="url" placeholder="https://…" value={f.link} onChange={bind("link")} /></label>
       <label>Notes<textarea rows={3} placeholder="Confirmation #, hours, what to order, who's driving…" value={f.note} onChange={bind("note")} /></label>
+      {owner && <PrivateBox f={f} setF={setF} />}
     </FormShell>
   );
 }
-function IdeaForm({ init, label, onSave, onClose, onRemove }) {
-  const [f, bind] = useForm({ name: "", where: "", link: "", note: "", ...init });
+function IdeaForm({ init, label, onSave, onClose, onRemove, owner }) {
+  const [f, bind, setF] = useForm({ name: "", where: "", link: "", note: "", secret: false, ...init });
   const [busy, submit] = useSubmit(f, onSave, onClose);
   return (
     <FormShell label={label} busy={busy} onSubmit={submit} onRemove={onRemove}>
@@ -169,10 +170,11 @@ function IdeaForm({ init, label, onSave, onClose, onRemove }) {
       <label>Where<input placeholder="Place or address" value={f.where} onChange={bind("where")} /></label>
       <label>Link<input inputMode="url" placeholder="https://…" value={f.link} onChange={bind("link")} /></label>
       <label>Notes<textarea rows={3} placeholder="Why it's worth it, hours, cost…" value={f.note} onChange={bind("note")} /></label>
+      {owner && <PrivateBox f={f} setF={setF} />}
     </FormShell>
   );
 }
-function PackForm({ init, label, onSave, onClose, onRemove }) {
+function PackForm({ init, label, onSave, onClose, onRemove, members }) {
   const [f, bind] = useForm({ name: "", cat: "Clothes", qty: "", note: "", ...init });
   const [busy, submit] = useSubmit(f, onSave, onClose);
   return (
@@ -182,7 +184,7 @@ function PackForm({ init, label, onSave, onClose, onRemove }) {
         <label>How many<input placeholder="2 pairs" value={f.qty} onChange={bind("qty")} /></label>
         <label>Category<select value={f.cat} onChange={bind("cat")}>{CATS.map((c) => <option key={c}>{c}</option>)}</select></label>
       </div>
-      <p className="co-opt">{PERSONAL.includes(f.cat) ? "Personal: Mel and Nick each tap their own name." : "Shared gear: packed once either of you taps your name."}</p>
+      {members.length > 1 && <p className="co-opt">{PERSONAL.includes(f.cat) ? `Personal: ${members.map((x) => x.label).join(" and ")} each tap their own name.` : "Shared gear: packed once either of you taps your name."}</p>}
       <label>Notes<textarea rows={2} placeholder="Brand, size, where it is, buy on the way…" value={f.note} onChange={bind("note")} /></label>
     </FormShell>
   );
@@ -216,13 +218,25 @@ function Sheet({ title, onClose, children }) {
   );
 }
 
-function MelNick({ it, onSet }) {
+const MEL_NICK = [{ key: "m", label: "Mel" }, { key: "k", label: "Nick" }];
+
+function Toggles({ it, members, onSet }) {
+  const solo = members.length === 1;
   return (
     <div className="co-who">
-      {[["m", "Mel"], ["k", "Nick"]].map(([w, lab]) => (
-        <button key={w} className={`co-tog ${w}`} aria-pressed={!!it[w]} onClick={() => onSet(w, !it[w])}>{lab}</button>
+      {members.map(({ key, label }, i) => (
+        <button key={key} className={`co-tog t${i}`} aria-pressed={!!it[key]} aria-label={`${label} packed ${it.name}`} onClick={() => onSet(key, !it[key])}>{solo ? "Packed" : label}</button>
       ))}
     </div>
+  );
+}
+
+function PrivateBox({ f, setF }) {
+  return (
+    <label className="co-private">
+      <input type="checkbox" checked={!!f.secret} onChange={(ev) => setF((x) => ({ ...x, secret: ev.target.checked }))} />
+      <span>Private: only Mel &amp; Nick can see this<small>Alex, Casey and Wesley won&apos;t see it at all.</small></span>
+    </label>
   );
 }
 
@@ -246,6 +260,7 @@ function Tally({ rows, foot }) {
 export default function TripPage() {
   const [auth, setAuth] = useState("checking");
   const [trip, setTrip] = useState(null);
+  const [who, setWho] = useState(null);
   const [saved, setSaved] = useState(true);
   const [tab, setTab] = useState("plan");
   const [day, setDay] = useState("thu");
@@ -264,7 +279,7 @@ export default function TripPage() {
     const r = await api("/api/trip");
     if (r.status === 401) { setAuth("login"); return; }
     if (!r.ok) { setToast({ text: r.data.error }); return; }
-    setTrip(r.data.trip); setSaved(r.data.saved); setAuth("in");
+    setTrip(r.data.trip); setWho(r.data.me); setSaved(r.data.saved); setAuth("in");
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -341,29 +356,34 @@ export default function TripPage() {
   const add = (list, item, dayK) => send({ op: "add", list, day: dayK, item });
   const closeSheet = useCallback(() => setSheet(null), []);
 
-  async function logout() { await api("/api/trip/login", { method: "DELETE" }); setAuth("login"); setTrip(null); }
+  async function logout() { await api("/api/trip/login", { method: "DELETE" }); setAuth("login"); setTrip(null); setWho(null); setTab("plan"); }
 
   if (auth === "checking") return <div className="co co-loading"><p>Sorting the postcards…</p></div>;
   if (auth === "login") return <div className="co"><Login onIn={load} /></div>;
-  if (!trip) return null;
+  if (!trip || !who) return null;
+  const owner = who.role === "owner";
+  const members = who.members;
 
   const P = trip.pack.filter(isP), SH = trip.pack.filter((x) => !isP(x));
-  const packed = (x) => (isP(x) ? x.m && x.k : x.m || x.k);
+  const packed = (x) => (isP(x) ? members.every((m) => x[m.key]) : members.some((m) => x[m.key]));
   const allPackDone = (s) => s.pack.every(packed);
   const dayDone = (k) => (s) => s.days.find((d) => d.k === k).stops.every((x) => x.done);
-  const camDone = trip.cam.filter((x) => x.m || x.k).length;
+  const camDone = owner ? trip.cam.filter((x) => x.m || x.k).length : 0;
   const shownCats = cat === "All" ? CATS : [cat];
   const dayIndex = trip.days.findIndex((d) => d.k === D.k);
   const sun = sunTimes(DATES[D.k], DIVIDE[0], DIVIDE[1]);
   const wx = weather?.days?.[DATES[D.k]];
 
-  const tabs = [["plan", "Trip", Icon.trip], ["ideas", "Ideas", Icon.ideas], ["pack", "Pack", Icon.pack], ["cam", "Camera", Icon.cam]];
+  const tabs = [["plan", "Trip", Icon.trip], ["ideas", "Ideas", Icon.ideas], ["pack", "Pack", Icon.pack], ...(owner ? [["cam", "Camera", Icon.cam]] : [])];
+  const tallyRows = members.length === 1
+    ? [[who.name, trip.pack.filter(packed).length, trip.pack.length, "t0"]]
+    : [...members.map((m, i) => [m.label, P.filter((x) => x[m.key]).length, P.length, `t${i}`]), ["Shared", SH.filter((x) => members.some((m) => x[m.key])).length, SH.length, "shared"]];
   const fab = {
     plan: [`Add a stop to ${D.d}`, () => setSheet({ kind: "stop" })],
     ideas: ["Add an idea", () => setSheet({ kind: "idea" })],
     pack: ["Add something to pack", () => setSheet({ kind: "pack" })],
     cam: ["Add gear", () => setSheet({ kind: "cam" })],
-  }[tab];
+  }[tab] || [`Add a stop to ${D.d}`, () => setSheet({ kind: "stop" })];
 
   return (
     <div className="co co-post">
@@ -372,12 +392,12 @@ export default function TripPage() {
       <header className="co-hero">
         <TripScene />
         <div className="co-heroIn">
-          <Greetings sub="Colorado · Nov 19–22 · Mel & Nick" />
+          <Greetings sub="Colorado · Nov 19–22" />
           <span className="co-chip">{countdown()}</span>
         </div>
       </header>
 
-      <nav className="co-tabs" aria-label="Sections">
+      <nav className={`co-tabs${owner ? "" : " three"}`} aria-label="Sections">
         <div className="co-tabsIn">
           {tabs.map(([k, l, ic]) => (
             <button key={k} aria-current={tab === k ? "page" : undefined} onClick={() => { setTab(k); setReorder(false); }}>{ic}<span>{l}</span></button>
@@ -431,7 +451,7 @@ export default function TripPage() {
               <div className="co-back">
                 <div className="co-backHead">
                   <h3>The plan</h3>
-                  {D.stops.length > 1 && <button className="co-linkBtn" onClick={() => setReorder((r) => !r)}>{reorder ? "Done reordering" : "Reorder"}</button>}
+                  {owner && D.stops.length > 1 && <button className="co-linkBtn" onClick={() => setReorder((r) => !r)}>{reorder ? "Done reordering" : "Reorder"}</button>}
                 </div>
                 <ol className="co-stops">
                   {D.stops.map((s, i) => {
@@ -444,6 +464,7 @@ export default function TripPage() {
                           <span className="co-time">{s.time}</span>
                           <div className="co-stopBody">
                             <button className="co-stopName" onClick={() => setSheet({ kind: "stop", item: s })}>{s.name}</button>
+                            {s.secret && <span className="co-lock">Private · Mel &amp; Nick only</span>}
                             {s.where && <p className="co-where">{s.where}</p>}
                             {s.note && <p className="co-note">{s.note}</p>}
                             {(routable(s.where) || s.link) && (
@@ -493,6 +514,7 @@ export default function TripPage() {
                 <li key={it.id} className={`co-noteCard r${i % 4}`}>
                   <span className="co-tape" aria-hidden="true" />
                   <button className="co-noteName" onClick={() => setSheet({ kind: "idea", item: it })}>{it.name}</button>
+                  {it.secret && <span className="co-lock">Private · Mel &amp; Nick only</span>}
                   {it.where && <p className="co-where">{it.where}</p>}
                   {it.note && <p className="co-hand">{it.note}</p>}
                   {(routable(it.where) || it.link) && (
@@ -519,7 +541,7 @@ export default function TripPage() {
           <>
             <section className="co-pad co-padTop">
               <Tally
-                rows={[["Mel", P.filter((x) => x.m).length, P.length, "mel"], ["Nick", P.filter((x) => x.k).length, P.length, "nick"], ["Shared", SH.filter((x) => x.m || x.k).length, SH.length, "shared"]]}
+                rows={tallyRows}
                 foot={cheer(trip.pack.filter(packed).length, trip.pack.length)}
               />
             </section>
@@ -536,7 +558,7 @@ export default function TripPage() {
                   return (
                     <div key={c} className="co-luggage">
                       <span className="co-grommet" aria-hidden="true" />
-                      <div className="co-tagHead"><h3>{c}</h3><span>{PERSONAL.includes(c) ? "each of us" : "shared"} · {its.filter(packed).length}/{its.length}</span></div>
+                      <div className="co-tagHead"><h3>{c}</h3><span>{members.length > 1 ? `${PERSONAL.includes(c) ? "each of us" : "shared"} · ` : ""}{its.filter(packed).length}/{its.length}</span></div>
                       <ul className="co-rows">
                         {its.map((it) => (
                           <li key={it.id} className={packed(it) ? "done" : ""}>
@@ -544,7 +566,7 @@ export default function TripPage() {
                               <span className="co-rowName">{it.qty && <em>{it.qty}</em>}{it.name}</span>
                               {it.note && <small>{it.note}</small>}
                             </button>
-                            <MelNick it={it} onSet={(w, v) => set("pack", it.id, w, v, allPackDone)} />
+                            <Toggles it={it} members={members} onSet={(w, v) => set("pack", it.id, w, v, allPackDone)} />
                             <button className="co-del" onClick={() => remove("pack", it)} aria-label={`Remove ${it.name}`}>×</button>
                           </li>
                         ))}
@@ -553,13 +575,13 @@ export default function TripPage() {
                   );
                 })}
               </div>
-              <p className="co-hint">Your own stuff needs both names; shared gear needs one. Tap an item to edit it.</p>
+              <p className="co-hint">{members.length > 1 ? "Your own stuff needs both names; shared gear needs one. " : ""}Tap an item to edit it. Only you{members.length > 1 ? ` and ${members.find((m) => m.label !== who.name)?.label}` : ""} can see this list.</p>
               <button className="co-linkBtn dim" onClick={() => send({ op: "uncheck", list: "pack" })}>Uncheck everything for the trip home</button>
             </section>
           </>
         )}
 
-        {tab === "cam" && (
+        {tab === "cam" && owner && (
           <section className="co-pad">
             <Tally rows={[["In the bag", camDone, trip.cam.length, "shared"]]} />
             <div className="co-luggage film">
@@ -571,7 +593,7 @@ export default function TripPage() {
                     <button className="co-rowMain" onClick={() => setSheet({ kind: "cam", item: it })}>
                       <span className="co-rowName">{it.name}</span>{it.note && <small>{it.note}</small>}
                     </button>
-                    <MelNick it={it} onSet={(w, v) => set("cam", it.id, w, v, (s) => s.cam.every((x) => x.m || x.k))} />
+                    <Toggles it={it} members={MEL_NICK} onSet={(w, v) => set("cam", it.id, w, v, (s) => s.cam.every((x) => x.m || x.k))} />
                     <button className="co-del" onClick={() => remove("cam", it)} aria-label={`Remove ${it.name}`}>×</button>
                   </li>
                 ))}
@@ -582,17 +604,17 @@ export default function TripPage() {
           </section>
         )}
 
-        <footer className="co-foot"><span>Divide, CO 80814 · 38°56′N 105°09′W · Center of the Known Universe</span><button className="co-linkBtn dim" onClick={logout}>Log out</button></footer>
+        <footer className="co-foot"><span>Signed in as {who.name} · Divide, CO 80814 · Center of the Known Universe</span><button className="co-linkBtn dim" onClick={logout}>Log out</button></footer>
       </div>
 
       <button className="co-fab" onClick={fab[1]} aria-label={fab[0]}>{Icon.plus}<span>{fab[0]}</span></button>
 
       {sheet?.kind === "stop" && (
         <Sheet title={sheet.item ? "Edit stop" : `New stop · ${D.d}`} onClose={closeSheet}>
-          <StopForm init={sheet.item} days={trip.days} dayK={D.k} label={sheet.item ? "Save" : "Add stop"} onClose={closeSheet}
+          <StopForm owner={owner} init={sheet.item} days={trip.days} dayK={D.k} label={sheet.item ? "Save" : "Add stop"} onClose={closeSheet}
             onSave={async (f) => {
               if (!sheet.item) { const ok = await add("stops", f, f.day); if (ok && f.day !== D.k) setDay(f.day); return ok; }
-              const ok = await edit("stops", sheet.item.id, { time: f.time, name: f.name, where: f.where, link: f.link, note: f.note });
+              const ok = await edit("stops", sheet.item.id, { time: f.time, name: f.name, where: f.where, link: f.link, note: f.note, ...(owner ? { secret: !!f.secret } : {}) });
               if (ok && f.day !== D.k) { await moveStop(sheet.item.id, f.day); setToast({ text: `Moved to ${trip.days.find((d) => d.k === f.day).d}` }); }
               return ok;
             }}
@@ -604,19 +626,19 @@ export default function TripPage() {
       )}
       {sheet?.kind === "idea" && (
         <Sheet title={sheet.item ? "Edit idea" : "Pin an idea"} onClose={closeSheet}>
-          <IdeaForm init={sheet.item} label={sheet.item ? "Save" : "Pin it"} onClose={closeSheet}
-            onSave={(f) => sheet.item ? edit("ideas", sheet.item.id, { name: f.name, where: f.where, link: f.link, note: f.note }) : add("ideas", f)}
+          <IdeaForm owner={owner} init={sheet.item} label={sheet.item ? "Save" : "Pin it"} onClose={closeSheet}
+            onSave={(f) => sheet.item ? edit("ideas", sheet.item.id, { name: f.name, where: f.where, link: f.link, note: f.note, ...(owner ? { secret: !!f.secret } : {}) }) : add("ideas", f)}
             onRemove={sheet.item ? () => remove("ideas", sheet.item) : null} />
         </Sheet>
       )}
       {sheet?.kind === "pack" && (
         <Sheet title={sheet.item ? "Edit item" : "Pack something"} onClose={closeSheet}>
-          <PackForm init={sheet.item || { cat: cat === "All" ? "Clothes" : cat }} label={sheet.item ? "Save" : "Add to the list"} onClose={closeSheet}
+          <PackForm members={members} init={sheet.item || { cat: cat === "All" ? "Clothes" : cat }} label={sheet.item ? "Save" : "Add to the list"} onClose={closeSheet}
             onSave={(f) => sheet.item ? edit("pack", sheet.item.id, { name: f.name, cat: f.cat, qty: f.qty, note: f.note }) : add("pack", f)}
             onRemove={sheet.item ? () => remove("pack", sheet.item) : null} />
         </Sheet>
       )}
-      {sheet?.kind === "cam" && (
+      {sheet?.kind === "cam" && owner && (
         <Sheet title={sheet.item ? "Edit gear" : "Add gear"} onClose={closeSheet}>
           <CamForm init={sheet.item} label={sheet.item ? "Save" : "Add to the bag"} onClose={closeSheet}
             onSave={(f) => sheet.item ? edit("cam", sheet.item.id, { name: f.name, note: f.note }) : add("cam", f)}
