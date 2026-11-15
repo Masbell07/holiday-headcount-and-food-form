@@ -182,6 +182,23 @@ function MelNick({ it, onSet }) {
   );
 }
 
+function Tally({ rows, foot }) {
+  return (
+    <div className="co-tally">
+      <div className="co-tallyRows">
+        {rows.map(([label, done, total, tone]) => (
+          <div key={label} className={`co-t ${tone}`}>
+            <span>{label}</span>
+            <b>{done}<small>/{total}</small></b>
+            <i><em style={{ width: `${total ? (done / total) * 100 : 0}%` }} /></i>
+          </div>
+        ))}
+      </div>
+      {foot && <p className="co-tallyFoot">{foot}</p>}
+    </div>
+  );
+}
+
 function Ring({ done, total, tone, label }) {
   const p = total ? done / total : 0;
   const C = 2 * Math.PI * 22;
@@ -348,24 +365,28 @@ export default function TripPage() {
 
         {tab === "pack" && (
           <>
-            <div className="co-stick">
-              <div className="co-rings">
-                <Ring label="Mel's stuff" done={P.filter((x) => x.m).length} total={P.length} tone="mel" />
-                <Ring label="Nick's stuff" done={P.filter((x) => x.k).length} total={P.length} tone="nick" />
-                <Ring label="Shared gear" done={SH.filter((x) => x.m || x.k).length} total={SH.length} tone="shared" />
-              </div>
+            <section className="co-pad co-padTop">
+              <Tally
+                rows={[
+                  ["Mel", P.filter((x) => x.m).length, P.length, "mel"],
+                  ["Nick", P.filter((x) => x.k).length, P.length, "nick"],
+                  ["Shared", SH.filter((x) => x.m || x.k).length, SH.length, "shared"],
+                ]}
+                foot={cheer(trip.pack.filter(packed).length, trip.pack.length)}
+              />
+            </section>
+            <div className="co-stick co-stickChips">
               <div className="co-chips">
                 {["All", ...CATS].map((c) => <button key={c} aria-pressed={c === cat} onClick={() => setCat(c)}>{c}</button>)}
               </div>
             </div>
             <section className="co-pad">
-              <p className="co-cheer">{cheer(trip.pack.filter(packed).length, trip.pack.length)}</p>
               {shownCats.map((c) => {
                 const its = trip.pack.filter((p) => p.cat === c);
                 if (!its.length) return null;
                 return (
                   <div key={c} className="co-group">
-                    <h3>{c}<span>{PERSONAL.includes(c) ? "each of us" : "shared"}</span></h3>
+                    <h3>{c}<span>{PERSONAL.includes(c) ? "each of us" : "shared"}</span><b>{its.filter(packed).length}/{its.length}</b></h3>
                     <ul className="co-rows">
                       {its.map((it) => {
                         return (
@@ -390,9 +411,9 @@ export default function TripPage() {
 
         {tab === "cam" && (
           <>
-            <div className="co-stick">
-              <div className="co-rings one"><Ring label="In the bag" done={camDone} total={trip.cam.length} tone="cam" /></div>
-            </div>
+            <section className="co-pad co-padTop">
+              <Tally rows={[["In the bag", camDone, trip.cam.length, "shared"]]} />
+            </section>
             <section className="co-pad">
               <ul className="co-rows">
                 {trip.cam.map((it) => (
