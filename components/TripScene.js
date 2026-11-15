@@ -36,7 +36,7 @@ const NEAR_TREES = forest(23, -40, 1660, 600, 70, 170, 34);
 
 export default function TripScene({ className = "" }) {
   return (
-    <svg className={`co-scene ${className}`} viewBox="0 0 1600 600" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+    <svg className={`co-scene ${className}`} viewBox="0 0 1600 600" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
       <defs>
         <linearGradient id="cs-sky" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#070c16" /><stop offset=".45" stopColor="#18233a" />

@@ -5,8 +5,6 @@ import TripScene from "@/components/TripScene";
 
 const CATS = ["Clothes", "Outdoor", "Fishing", "Car", "Fun", "Health"];
 const PERSONAL = ["Clothes", "Outdoor", "Health"];
-const WHO = { "": "Who's bringing?", m: "Mel", k: "Nick", b: "Both" };
-const NEXT_WHO = { "": "m", m: "k", k: "b", b: "" };
 const TRIP_START = new Date("2026-11-19T00:00:00-06:00");
 const isP = (it) => PERSONAL.includes(it.cat);
 
@@ -139,9 +137,7 @@ function PackForm({ init, label, onSave, onClose, onRemove }) {
         <label>How many<input placeholder="2 pairs" value={f.qty} onChange={bind("qty")} /></label>
         <label>Category<select value={f.cat} onChange={bind("cat")}>{CATS.map((c) => <option key={c}>{c}</option>)}</select></label>
       </div>
-      {shared ? (
-        <label>Who&apos;s bringing it<select value={f.who} onChange={bind("who")}><option value="">Not decided</option><option value="m">Mel</option><option value="k">Nick</option><option value="b">Both of us</option></select></label>
-      ) : <p className="co-opt">Clothes, outdoor and health items: Mel and Nick each check it off for themselves.</p>}
+      <p className="co-opt">{shared ? "Shared gear: packed once either of you taps your name." : "Personal: Mel and Nick each tap their own name."}</p>
       <label>Notes<textarea rows={2} placeholder="Brand, size, where it is, buy on the way…" value={f.note} onChange={bind("note")} /></label>
     </FormShell>
   );
@@ -172,6 +168,16 @@ function Sheet({ title, onClose, children }) {
         <div className="co-sheetHead"><h2>{title}</h2><button className="co-close" onClick={onClose} aria-label="Close">×</button></div>
         {children}
       </div>
+    </div>
+  );
+}
+
+function MelNick({ it, onSet }) {
+  return (
+    <div className="co-who">
+      {[["m", "Mel"], ["k", "Nick"]].map(([w, lab]) => (
+        <button key={w} className={`co-tog ${w}`} aria-pressed={!!it[w]} onClick={() => onSet(w, !it[w])}>{lab}</button>
+      ))}
     </div>
   );
 }
@@ -218,7 +224,7 @@ export default function TripPage() {
     const t = setTimeout(() => setToast(null), toast.undo ? 6000 : 3500);
     return () => clearTimeout(t);
   }, [toast]);
-  useEffect(() => { window.scrollTo({ top: 0 }); }, [tab]);
+  
 
   async function send(op, optimistic) {
     if (optimistic) setTrip((s) => optimistic(structuredClone(s)));
@@ -264,12 +270,10 @@ export default function TripPage() {
 
   const D = trip.days.find((d) => d.k === day) || trip.days[0];
   const P = trip.pack.filter(isP), SH = trip.pack.filter((x) => !isP(x));
-  const mine = (w) => SH.filter((x) => x.who === w || x.who === "b");
-  const melDone = P.filter((x) => x.m).length + mine("m").filter((x) => x.done).length;
-  const nickDone = P.filter((x) => x.k).length + mine("k").filter((x) => x.done).length;
-  const allPackDone = (s) => s.pack.every((x) => (isP(x) ? x.m && x.k : x.done));
+  const packed = (x) => (isP(x) ? x.m && x.k : x.m || x.k);
+  const allPackDone = (s) => s.pack.every(packed);
   const dayDone = (k) => (s) => s.days.find((d) => d.k === k).stops.every((x) => x.done);
-  const camDone = trip.cam.filter((x) => x.done).length;
+  const camDone = trip.cam.filter((x) => x.m || x.k).length;
   const shownCats = cat === "All" ? CATS : [cat];
 
   const tabs = [["plan", "Trip", Icon.trip], ["pack", "Pack", Icon.pack], ["cam", "Camera", Icon.cam]];
@@ -283,23 +287,24 @@ export default function TripPage() {
     <div className="co co-app">
       <Snow burst={burst} />
 
-      <nav className="co-tabbar" aria-label="Sections">
-        <div className="co-brand"><b>Divide</b><span>Nov 19–22</span></div>
-        {tabs.map(([k, l, ic]) => (
-          <button key={k} aria-current={tab === k ? "page" : undefined} onClick={() => setTab(k)}>{ic}<span>{l}</span></button>
-        ))}
-        <button className="co-out" onClick={logout}>Log out</button>
+      <header className="co-top">
+        <TripScene />
+        <div className="co-topText">
+          <span className="co-chip">{countdown()}</span>
+          <h1>Divide, Colorado</h1>
+          <p>Nov 19–22 · Mel &amp; Nick · 9,165 ft under Pikes Peak</p>
+        </div>
+      </header>
+
+      <nav className="co-tabs" aria-label="Sections">
+        <div className="co-tabsIn">
+          {tabs.map(([k, l, ic]) => (
+            <button key={k} aria-current={tab === k ? "page" : undefined} onClick={() => setTab(k)}>{ic}<span>{l}</span></button>
+          ))}
+        </div>
       </nav>
 
       <div className="co-body">
-        <header className="co-top">
-          <TripScene />
-          <div className="co-topText">
-            <span className="co-chip">{countdown()}</span>
-            <h1>Divide, CO</h1>
-            <p>Nov 19–22 · Mel &amp; Nick · 9,165 ft</p>
-          </div>
-        </header>
 
         {!saved && <p className="co-warn">Storage isn&apos;t connected here, so changes won&apos;t be saved.</p>}
 
@@ -345,16 +350,16 @@ export default function TripPage() {
           <>
             <div className="co-stick">
               <div className="co-rings">
-                <Ring label="Mel" done={melDone} total={P.length + mine("m").length} tone="mel" />
-                <Ring label="Nick" done={nickDone} total={P.length + mine("k").length} tone="nick" />
-                <Ring label="Shared" done={SH.filter((x) => x.done).length} total={SH.length} tone="shared" />
+                <Ring label="Mel's stuff" done={P.filter((x) => x.m).length} total={P.length} tone="mel" />
+                <Ring label="Nick's stuff" done={P.filter((x) => x.k).length} total={P.length} tone="nick" />
+                <Ring label="Shared gear" done={SH.filter((x) => x.m || x.k).length} total={SH.length} tone="shared" />
               </div>
               <div className="co-chips">
                 {["All", ...CATS].map((c) => <button key={c} aria-pressed={c === cat} onClick={() => setCat(c)}>{c}</button>)}
               </div>
             </div>
             <section className="co-pad">
-              <p className="co-cheer">{cheer(trip.pack.filter((x) => (isP(x) ? x.m && x.k : x.done)).length, trip.pack.length)}</p>
+              <p className="co-cheer">{cheer(trip.pack.filter(packed).length, trip.pack.length)}</p>
               {shownCats.map((c) => {
                 const its = trip.pack.filter((p) => p.cat === c);
                 if (!its.length) return null;
@@ -363,25 +368,13 @@ export default function TripPage() {
                     <h3>{c}<span>{PERSONAL.includes(c) ? "each of us" : "shared"}</span></h3>
                     <ul className="co-rows">
                       {its.map((it) => {
-                        const done = isP(it) ? it.m && it.k : it.done;
                         return (
-                          <li key={it.id} className={done ? "done" : ""}>
+                          <li key={it.id} className={packed(it) ? "done" : ""}>
                             <button className="co-rowMain" onClick={() => setSheet({ kind: "pack", item: it })} aria-label={`Edit ${it.name}`}>
                               <span className="co-rowName">{it.qty && <em>{it.qty}</em>}{it.name}</span>
                               {it.note && <small>{it.note}</small>}
                             </button>
-                            {isP(it) ? (
-                              <div className="co-who">
-                                {[["m", "Mel"], ["k", "Nick"]].map(([w, lab]) => (
-                                  <button key={w} className={`co-tog ${w}`} aria-pressed={it[w]} onClick={() => set("pack", it.id, w, !it[w], allPackDone)}>{lab}</button>
-                                ))}
-                              </div>
-                            ) : (
-                              <div className="co-who">
-                                <button className={`co-claim ${it.who}`} onClick={() => set("pack", it.id, "who", NEXT_WHO[it.who])}>{WHO[it.who]}</button>
-                                <button className="co-check sm" aria-pressed={it.done} aria-label={`Packed ${it.name}`} onClick={() => set("pack", it.id, "done", !it.done, allPackDone)}>{Icon.check}</button>
-                              </div>
-                            )}
+                            <MelNick it={it} onSet={(w, v) => set("pack", it.id, w, v, allPackDone)} />
                           </li>
                         );
                       })}
@@ -389,7 +382,7 @@ export default function TripPage() {
                   </div>
                 );
               })}
-              <p className="co-hintline">Tap an item to edit it. Shared gear: tap the tag to pick Mel, Nick or both.</p>
+              <p className="co-hintline">Tap your name when it&apos;s in your bag. Your own stuff needs both names; shared gear just needs one of you. Tap an item to edit it.</p>
               <button className="co-link" onClick={() => send({ op: "uncheck", list: "pack" })}>Uncheck everything for the trip home</button>
             </section>
           </>
@@ -403,11 +396,11 @@ export default function TripPage() {
             <section className="co-pad">
               <ul className="co-rows">
                 {trip.cam.map((it) => (
-                  <li key={it.id} className={it.done ? "done" : ""}>
+                  <li key={it.id} className={it.m || it.k ? "done" : ""}>
                     <button className="co-rowMain" onClick={() => setSheet({ kind: "cam", item: it })} aria-label={`Edit ${it.name}`}>
                       <span className="co-rowName">{it.name}</span>{it.note && <small>{it.note}</small>}
                     </button>
-                    <button className="co-check sm" aria-pressed={it.done} aria-label={`Packed ${it.name}`} onClick={() => set("cam", it.id, "done", !it.done, (s) => s.cam.every((x) => x.done))}>{Icon.check}</button>
+                    <MelNick it={it} onSet={(w, v) => set("cam", it.id, w, v, (s) => s.cam.every((x) => x.m || x.k))} />
                   </li>
                 ))}
               </ul>
@@ -416,6 +409,7 @@ export default function TripPage() {
             </section>
           </>
         )}
+        <footer className="co-foot"><span>38°56′N 105°09′W · Center of the Known Universe</span><button className="co-link" onClick={logout}>Log out</button></footer>
       </div>
 
       <button className="co-fab" onClick={fab[1]} aria-label={fab[0]}>{Icon.plus}<span>{fab[0]}</span></button>
@@ -430,7 +424,7 @@ export default function TripPage() {
       {sheet?.kind === "pack" && (
         <Sheet title={sheet.item ? "Edit item" : "Pack something"} onClose={closeSheet}>
           <PackForm init={sheet.item || { cat: cat === "All" ? "Clothes" : cat }} label={sheet.item ? "Save" : "Add to the list"} onClose={closeSheet}
-            onSave={(f) => sheet.item ? edit("pack", sheet.item.id, { name: f.name, cat: f.cat, qty: f.qty, note: f.note, who: f.who }) : add("pack", f)}
+            onSave={(f) => sheet.item ? edit("pack", sheet.item.id, { name: f.name, cat: f.cat, qty: f.qty, note: f.note }) : add("pack", f)}
             onRemove={sheet.item ? () => remove("pack", sheet.item) : null} />
         </Sheet>
       )}
