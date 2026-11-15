@@ -1,12 +1,12 @@
 // Dusk over Pikes Peak from Divide: layered ranges, granite domes, bare aspens and a dark spruce line.
 // Trees and stars come from a seeded generator so server and browser draw the same picture.
 
-function rng(seed) {
+export function rng(seed) {
   let s = seed;
   return () => ((s = (s * 16807) % 2147483647) - 1) / 2147483646;
 }
 
-function conifer(x, base, h, r) {
+export function conifer(x, base, h, r) {
   const w = h * (0.2 + r() * 0.08);
   const tiers = 7 + Math.floor(r() * 4);
   const left = [], right = [];
@@ -20,7 +20,7 @@ function conifer(x, base, h, r) {
   return `M${x - 2},${base} L${left.join(" L")} L${x},${base - h} L${right.join(" L")} L${x + 2},${base}Z`;
 }
 
-function forest(seed, from, to, base, minH, maxH, step) {
+export function forest(seed, from, to, base, minH, maxH, step) {
   const r = rng(seed);
   const out = [];
   for (let x = from; x < to; x += step * (0.5 + r())) out.push(conifer(x, base + r() * 14, minH + r() * (maxH - minH), r));
