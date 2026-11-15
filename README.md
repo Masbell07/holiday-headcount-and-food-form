@@ -24,9 +24,9 @@ Guests RSVP, say how many adults and kids are coming, and claim dishes. The serv
 | Christmas 2026 | `/xmas` | `/host-xmas` |
 | Secret Santa 2026 | `/xmas-ss` (sign-up), `/xmas-ss-drawing` (see your match) | Secret Santa section of `/host-xmas` |
 
-| Colorado trip (Nov 19–22) | `/colorado` (login: **mel** or **nick**) | — |
+| Colorado trip (Nov 19–22) | `/colorado` | — |
 
-The Colorado page is a private trip planner: itinerary by day, a packing list where Mel and Nick each check off their own things and shared items get assigned to one of them, and a camera bag checklist. Everything can be added, removed and checked off, and it's saved in the same Upstash storage, so both phones see the same list. It has its own login, separate from the host login; to change the password set `TRIP_PASSWORD` (and optionally `TRIP_USERS`, comma-separated) in Vercel.
+The Colorado page is a private trip planner with its own logins, separate from the host login. **Mel and Nick** (password set by `TRIP_PASSWORD`, default built in) see everything: the itinerary, ideas, their packing list and the camera bag. **Alex, Casey and Wesley** (password set by `TRIP_GUEST_PASSWORD`, default built in) see the same itinerary and ideas, except anything Mel or Nick mark **Private**, and only their own packing list: Alex and Casey share one, Wesley has his own. Guests never get the camera bag or anyone else's list; the server leaves those out entirely.
 
 Each event has its own RSVPs, day vote, dish claims and must-haves. Days, times and must-haves live in `lib/events.js`. One host login works for both dashboards.
 
