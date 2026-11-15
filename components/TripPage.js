@@ -71,6 +71,7 @@ const Icon = {
   check: <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 10.5 L8.5 14 L15 6.5" /></svg>,
   plus: <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5 V19 M5 12 H19" /></svg>,
   pin: <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21 C12 21 5 14.5 5 9.5 a7 7 0 0 1 14 0 C19 14.5 12 21 12 21Z" /><circle cx="12" cy="9.5" r="2.4" /></svg>,
+  house: <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11 L12 4 L21 11 M5 9.5 V20 H19 V9.5" /><path d="M10 20 V14 H14 V20" /></svg>,
   car: <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16 V12 L6 7 H18 L20 12 V16 Z M4 12 H20" /><circle cx="7.5" cy="16.5" r="1.8" /><circle cx="16.5" cy="16.5" r="1.8" /></svg>,
 };
 
@@ -214,6 +215,78 @@ function Sheet({ title, onClose, children }) {
         <div className="co-sheetHead"><h2>{title}</h2><button className="co-close" onClick={onClose} aria-label="Close">×</button></div>
         {children}
       </div>
+    </div>
+  );
+}
+
+const CABIN = "413 Lake Drive W, Divide, CO 80814";
+
+function CabinCode({ house, owner, onSave }) {
+  const [editing, setEditing] = useState(false);
+  const [code, setCode] = useState(house.code || "");
+  useEffect(() => { if (!editing) setCode(house.code || ""); }, [house.code, editing]);
+  if (editing) return (
+    <form className="co-codeForm" onSubmit={async (ev) => { ev.preventDefault(); if (await onSave(code)) setEditing(false); }}>
+      <input value={code} onChange={(ev) => setCode(ev.target.value)} placeholder="e.g. 4821" inputMode="numeric" aria-label="Door code" autoFocus />
+      <button className="co-btn">Save</button>
+      <button type="button" className="co-linkBtn dim" onClick={() => setEditing(false)}>Cancel</button>
+    </form>
+  );
+  return (
+    <div className="co-code">
+      <span>Door code</span>
+      <b>{house.code || "Coming a few days before"}</b>
+      {owner && <button className="co-linkBtn" onClick={() => setEditing(true)}>{house.code ? "Change" : "Add code"}</button>}
+    </div>
+  );
+}
+
+function CabinInfo({ house, owner, onSaveCode }) {
+  return (
+    <div className="co-cabin">
+      <article className="co-welcome">
+        <p className="co-script co-scriptDark">Welcome to</p>
+        <h2>413 Lake Drive W</h2>
+        <p className="co-addr">Divide, CO 80814</p>
+        <div className="co-cabinBtns">
+          <a className="co-btn" href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(CABIN)}`} target="_blank" rel="noopener noreferrer">Directions in Google Maps</a>
+        </div>
+        <div className="co-alert">
+          <b>Don&apos;t use Apple Maps.</b> It takes you past the house to the next street. Use Google Maps or another GPS app.
+        </div>
+        <div className="co-alert soft">
+          <b>No cell service at the house.</b> Turn on Wi-Fi calling before you go so you can make calls once you&apos;re on the Starlink. Download offline maps too.
+        </div>
+      </article>
+
+      <article className="co-welcome">
+        <h3>Check in &amp; out</h3>
+        <div className="co-times">
+          <div><span>Check in</span><b>4 PM</b></div>
+          <div><span>Check out</span><b>11 AM</b></div>
+        </div>
+        <p>Want to check in early? Ask the host. They&apos;ll do their best if no other guests are there.</p>
+        <CabinCode house={house} owner={owner} onSave={onSaveCode} />
+        <p>Enter the code to unlock the front door. To lock it, press the lock icon. Before you leave, double check that every door and window is locked.</p>
+      </article>
+
+      <article className="co-welcome">
+        <h3>Shared driveway &amp; parking</h3>
+        <p>The driveway serves two homes. Ours is <b>413: follow the driveway up to the left.</b> Please don&apos;t use the neighbor&apos;s driveway to turn around.</p>
+        <p>There&apos;s room for <b>4 vehicles</b> in the parking spaces.</p>
+      </article>
+
+      <article className="co-welcome">
+        <h3>Snow removal</h3>
+        <p>A snow service clears the parking area, deck and hot tub patio, up to twice a day while it&apos;s snowing. No need to move cars; just know they&apos;ll be out plowing and shoveling.</p>
+        <p>If there isn&apos;t enough snow for them to come out, shovels are by the entrance.</p>
+      </article>
+
+      <article className="co-welcome bear">
+        <h3>Trash &amp; bears</h3>
+        <p><b>Bears have been around recently.</b> Lock all trash in the bear cans out front: push the lid down hard until it latches, then pull up to test it.</p>
+        <p>Don&apos;t leave any food or wrappers in the cars. Bears will damage them trying to get in.</p>
+      </article>
     </div>
   );
 }
@@ -374,7 +447,7 @@ export default function TripPage() {
   const sun = sunTimes(DATES[D.k], DIVIDE[0], DIVIDE[1]);
   const wx = weather?.days?.[DATES[D.k]];
 
-  const tabs = [["plan", "Trip", Icon.trip], ["ideas", "Ideas", Icon.ideas], ["pack", "Pack", Icon.pack], ...(owner ? [["cam", "Camera", Icon.cam]] : [])];
+  const tabs = [["plan", "Trip", Icon.trip], ["ideas", "Ideas", Icon.ideas], ["pack", "Pack", Icon.pack], ["cabin", "Cabin", Icon.house], ...(owner ? [["cam", "Camera", Icon.cam]] : [])];
   const tallyRows = members.length === 1
     ? [[who.name, trip.pack.filter(packed).length, trip.pack.length, "t0"]]
     : [...members.map((m, i) => [m.label, P.filter((x) => x[m.key]).length, P.length, `t${i}`]), ["Shared", SH.filter((x) => members.some((m) => x[m.key])).length, SH.length, "shared"]];
@@ -397,7 +470,7 @@ export default function TripPage() {
         </div>
       </header>
 
-      <nav className={`co-tabs${owner ? "" : " three"}`} aria-label="Sections">
+      <nav className={`co-tabs${owner ? " five" : ""}`} aria-label="Sections">
         <div className="co-tabsIn">
           {tabs.map(([k, l, ic]) => (
             <button key={k} aria-current={tab === k ? "page" : undefined} onClick={() => { setTab(k); setReorder(false); }}>{ic}<span>{l}</span></button>
@@ -581,6 +654,12 @@ export default function TripPage() {
           </>
         )}
 
+        {tab === "cabin" && (
+          <section className="co-pad">
+            <CabinInfo house={trip.house || { code: "" }} owner={owner} onSaveCode={(code) => send({ op: "house", code }, (s) => { s.house = { ...(s.house || {}), code }; return s; })} />
+          </section>
+        )}
+
         {tab === "cam" && owner && (
           <section className="co-pad">
             <Tally rows={[["In the bag", camDone, trip.cam.length, "shared"]]} />
@@ -607,7 +686,7 @@ export default function TripPage() {
         <footer className="co-foot"><span>Signed in as {who.name} · Divide, CO 80814 · Center of the Known Universe</span><button className="co-linkBtn dim" onClick={logout}>Log out</button></footer>
       </div>
 
-      <button className="co-fab" onClick={fab[1]} aria-label={fab[0]}>{Icon.plus}<span>{fab[0]}</span></button>
+      {tab !== "cabin" && <button className="co-fab" onClick={fab[1]} aria-label={fab[0]}>{Icon.plus}<span>{fab[0]}</span></button>}
 
       {sheet?.kind === "stop" && (
         <Sheet title={sheet.item ? "Edit stop" : `New stop · ${D.d}`} onClose={closeSheet}>
