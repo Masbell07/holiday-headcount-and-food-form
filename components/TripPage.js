@@ -599,7 +599,7 @@ export default function TripPage() {
                   <div className="co-putOn">
                     <span>Put it on</span>
                     {trip.days.map((d) => (
-                      <button key={d.k} onClick={() => { moveStop(it.id, d.k); setToast({ text: `Added ${it.name} to ${d.d}` }); }}>{d.d}</button>
+                      <button key={d.k} onClick={() => { moveStop(it.id, d.k); setDay(d.k); setTab("plan"); window.scrollTo({ top: 0 }); setToast({ text: `${it.name} added to ${d.d}'s plan` }); }}>{d.d}</button>
                     ))}
                   </div>
                   <button className="co-del co-noteDel" onClick={() => remove("ideas", it)} aria-label={`Remove ${it.name}`}>×</button>
