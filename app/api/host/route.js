@@ -29,6 +29,13 @@ export const POST = safe(async (req) => {
       await setSetting(ev, "chosenDay", day);
       return NextResponse.json({ ok: true, chosenDay: day || null });
     }
+    case "setCancelled": {
+      // Cancelling hides the RSVP form and shows a notice; every RSVP is kept so it can be brought back.
+      const on = Boolean(body.cancelled);
+      await setSetting(ev, "cancelled", on ? "1" : "");
+      await setSetting(ev, "cancelNote", on ? String(body.note || "").replace(/\s+/g, " ").trim().slice(0, 240) : "");
+      return NextResponse.json({ ok: true, cancelled: on });
+    }
     case "reset": {
       if (body.confirm !== "RESET") return err('Type RESET to confirm.');
       await resetAll(ev);
@@ -45,5 +52,5 @@ export const GET = safe(async (req) => {
   if (!ev) return err("Unknown event.", 404);
   const [rsvps, settings] = await Promise.all([allRsvps(ev), getSettings(ev)]);
   rsvps.sort((a, b) => a.createdAt - b.createdAt);
-  return NextResponse.json({ rsvps: rsvps.map(publicView), chosenDay: settings.chosenDay || null });
+  return NextResponse.json({ rsvps: rsvps.map(publicView), chosenDay: settings.chosenDay || null, cancelled: Boolean(settings.cancelled), cancelNote: settings.cancelNote || "" });
 });

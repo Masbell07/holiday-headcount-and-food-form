@@ -24,6 +24,10 @@ export default function HostDashboard({ eventId }) {
   const [state, setState] = useState("checking"); // checking | login | in
   const [rsvps, setRsvps] = useState([]);
   const [chosenDay, setChosenDay] = useState(null);
+  const [cancelled, setCancelled] = useState(false);
+  const [cancelNote, setCancelNote] = useState("");
+  const [noteDraft, setNoteDraft] = useState("");
+  const [confirmCancel, setConfirmCancel] = useState(false);
   const [editing, setEditing] = useState(null); // rsvp object being edited, or blank() for new
   const [confirmId, setConfirmId] = useState(null);
   const [notice, setNotice] = useState(null);
@@ -35,6 +39,8 @@ export default function HostDashboard({ eventId }) {
     if (!r.ok) { setNotice({ kind: "error", text: r.data.error }); return; }
     setRsvps(r.data.rsvps);
     setChosenDay(r.data.chosenDay);
+    setCancelled(Boolean(r.data.cancelled));
+    setCancelNote(r.data.cancelNote || "");
     setState("in");
   }, []);
 
@@ -91,6 +97,37 @@ export default function HostDashboard({ eventId }) {
       </header>
 
       {notice && <p className={`banner ${notice.kind}`} role="status">{notice.text}</p>}
+
+      <section className={`card host-card status-card ${cancelled ? "is-cancelled" : ""}`}>
+        <div className="row spread">
+          <h2>{EV.name} status</h2>
+          <span className={`pill ${cancelled ? "no" : "yes"}`}>{cancelled ? "Cancelled" : "On"}</span>
+        </div>
+        {cancelled ? (
+          <>
+            <p className="small">Guests see a cancellation notice instead of the RSVP form. All {rsvps.length} RSVP{rsvps.length === 1 ? " is" : "s are"} kept.</p>
+            {cancelNote && <p className="small muted">Your note to guests: <em>{cancelNote}</em></p>}
+            <div className="row">
+              <button className="btn" onClick={() => action({ action: "setCancelled", cancelled: false }, `${EV.name} is back on. Guests can RSVP again.`)}>Bring it back</button>
+            </div>
+          </>
+        ) : confirmCancel ? (
+          <form className="cancel-form" onSubmit={async (e) => { e.preventDefault(); if (await action({ action: "setCancelled", cancelled: true, note: noteDraft }, `${EV.name} is marked cancelled.`)) { setConfirmCancel(false); setNoteDraft(""); } }}>
+            <label htmlFor="cancel-note" className="small"><strong>Note for guests</strong> (optional)</label>
+            <input id="cancel-note" value={noteDraft} onChange={(e) => setNoteDraft(e.target.value)} placeholder="e.g. Sorry everyone, we'll reschedule soon." maxLength={240} />
+            <p className="small muted">Guests will see that it's cancelled and won't be able to RSVP. Nothing is deleted, and you can bring it back anytime.</p>
+            <div className="row">
+              <button className="btn danger-btn" type="submit">Yes, cancel {EV.name}</button>
+              <button type="button" className="link" onClick={() => { setConfirmCancel(false); setNoteDraft(""); }}>Keep it on</button>
+            </div>
+          </form>
+        ) : (
+          <div className="row">
+            <span className="small muted">Happening as planned.</span>
+            <button className="link danger" onClick={() => setConfirmCancel(true)}>Cancel {EV.name}…</button>
+          </div>
+        )}
+      </section>
 
       <section className="host-stats">
         <div><strong>{totals.adults + totals.kids}</strong> coming <span className="muted">({totals.adults} adult{totals.adults === 1 ? "" : "s"}, {totals.kids} kid{totals.kids === 1 ? "" : "s"})</span></div>

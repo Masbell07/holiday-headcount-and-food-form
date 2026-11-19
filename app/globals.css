@@ -543,3 +543,17 @@ body:has(.theme-xmas) { background: #F3F1EA; }
 .chosen-date { font-size: 18px; color: var(--muted); }
 .chosen-time { font-family: var(--display); font-size: 26px; font-weight: 600; color: var(--cran); margin-top: 4px; }
 @media (max-width: 560px) { .chosen-name { font-size: 34px; } }
+/* Event cancelled */
+.status-card.is-cancelled { border-color: #E3B4AE; background: #FDF1EF; }
+.cancel-form { display: flex; flex-direction: column; gap: 8px; }
+.cancelled-card { text-align: center; align-items: center; border-top-color: var(--bad); }
+.cancelled-card h2 { font-size: 30px; }
+.cancelled-note { font-size: 18px; margin: 4px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.hero .cancelled-tag {
+  display: inline-block; margin-top: 10px; padding: 6px 16px; border-radius: 999px;
+  background: var(--bad); color: #fff; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; font-size: 14px;
+}
+.hero.cancelled h1, .hero.cancelled .when { text-decoration: line-through; text-decoration-thickness: 2px; opacity: 0.8; }
+.cancelled-wrap { max-width: 560px; width: calc(100% - 32px); margin: 28px auto 0; }
+@media (max-width: 880px) { .cancelled-wrap { order: 2; } }
+.status-card .pill.no { background: var(--bad-soft); color: var(--bad); }

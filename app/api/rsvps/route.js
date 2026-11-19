@@ -11,7 +11,7 @@ async function getHandler(req) {
   if (!ev) return err("Unknown event.", 404);
   const [rsvps, settings] = await Promise.all([allRsvps(ev), getSettings(ev)]);
   rsvps.sort((a, b) => a.createdAt - b.createdAt);
-  return NextResponse.json({ rsvps: rsvps.map(publicView), saved: usingDatabase, chosenDay: settings.chosenDay || null });
+  return NextResponse.json({ rsvps: rsvps.map(publicView), saved: usingDatabase, chosenDay: settings.chosenDay || null, cancelled: Boolean(settings.cancelled), cancelNote: settings.cancelNote || "" });
 }
 
 async function postHandler(req) {

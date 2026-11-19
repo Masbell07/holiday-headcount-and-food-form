@@ -28,6 +28,8 @@ export default function EventPage({ eventId }) {
   const [rsvps, setRsvps] = useState(null);
   const [loadError, setLoadError] = useState("");
   const [noDb, setNoDb] = useState(false);
+  const [cancelled, setCancelled] = useState(false);
+  const [cancelNote, setCancelNote] = useState("");
   const [mine, setMine] = useState(null);
   const [form, setForm] = useState(blankForm);
   const [editing, setEditing] = useState(true);
@@ -62,6 +64,8 @@ export default function EventPage({ eventId }) {
       setRsvps(data.rsvps);
       setNoDb(data.saved === false);
       setChosenId(data.chosenDay || null);
+      setCancelled(Boolean(data.cancelled));
+      setCancelNote(data.cancelNote || "");
       setLoadError("");
       return data.rsvps;
     } catch {
@@ -243,7 +247,7 @@ export default function EventPage({ eventId }) {
 
   return (
     <main className={`theme-${EV.theme}`}>
-      <header className="hero">
+      <header className={`hero ${cancelled ? "cancelled" : ""}`}>
         {EV.theme === "xmas" ? <Snow /> : <Leaves />}
         <div className="hero-inner">
           <p className="eyebrow">You're invited</p>
@@ -251,14 +255,25 @@ export default function EventPage({ eventId }) {
           <p className="when">
             {eventDate}
           </p>
-          {!CHOSEN && <p className="where">{EV.timesLine}</p>}
+          {!CHOSEN && !cancelled && <p className="where">{EV.timesLine}</p>}
           {EVENT.place && <p className="where">{EVENT.place}</p>}
           {EVENT.host && <p className="where">Hosted by {EVENT.host}</p>}
           {EV.id === "xmas" && <p className="where"><a className="hero-link" href="/xmas-ss">🎁 Join our Secret Santa →</a></p>}
-          <a href="#rsvp" className="cta" onClick={(e) => { e.preventDefault(); goToForm(true); }}>{myRsvp ? "See my RSVP" : CHOSEN ? "RSVP" : "RSVP & vote"}</a>
+          {cancelled ? <span className="cancelled-tag">Cancelled</span> : (
+          <a href="#rsvp" className="cta" onClick={(e) => { e.preventDefault(); goToForm(true); }}>{myRsvp ? "See my RSVP" : CHOSEN ? "RSVP" : "RSVP & vote"}</a>)}
         </div>
       </header>
 
+      {cancelled ? (
+        <section className="cancelled-wrap">
+          <div className="card cancelled-card">
+            <p className="eyebrow">Update</p>
+            <h2>{EV.name} {EV.year} is cancelled</h2>
+            {cancelNote ? <p className="cancelled-note">{cancelNote}</p> : <p className="muted">Sorry, this year's dinner won't be happening as planned.</p>}
+            <p className="small muted">If plans change, this page will update. Check back here.</p>
+          </div>
+        </section>
+      ) : (<>
       <section className="stats" aria-label="Headcount">
         <Stat n={stats.adults + stats.kids} label="coming" sub={`${stats.adults} adult${stats.adults === 1 ? "" : "s"}, ${stats.kids} kid${stats.kids === 1 ? "" : "s"}`} />
         <Stat n={stats.maybe} label="maybe" />
@@ -545,7 +560,9 @@ export default function EventPage({ eventId }) {
         )}
       </section>
 
-      {!formVisible && (
+      </>)}
+
+      {!cancelled && !formVisible && (
         <div className="sticky-bar">
           {myRsvp && !editing ? (
             <>
